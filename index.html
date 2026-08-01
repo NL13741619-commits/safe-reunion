@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#e85d04">
+  <title>安全團聚</title>
+<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
+<link rel="icon" type="image/png" sizes="180x180" href="icon-180.png">
+<link rel="shortcut icon" href="icon-180.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+:root{--primary:#e85d04;--primary-dark:#d00000;--bg:#fff8f0;--card:#fff;--text:#1a1a1a;--muted:#666;--success:#2a9d8f;--danger:#e63946;--border:#f4a261;--shadow:0 4px 12px rgba(0,0,0,.08);--radius:16px}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC","Microsoft JhengHei",sans-serif;background:var(--bg);color:var(--text);line-height:1.5;min-height:100vh;padding-bottom:80px}
+.app-header{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;padding:16px 20px;position:sticky;top:0;z-index:100;box-shadow:var(--shadow)}
+.app-header h1{font-size:1.4rem;font-weight:700;display:flex;align-items:center;gap:8px}
+.app-header .subtitle{font-size:.85rem;opacity:.9;margin-top:2px}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#fff;display:flex;justify-content:space-around;padding:8px 0 calc(8px + env(safe-area-inset-bottom));box-shadow:0 -2px 10px rgba(0,0,0,.08);z-index:100;border-top:1px solid #eee}
+.nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 8px;border:none;background:none;color:var(--muted);font-size:.7rem;cursor:pointer;min-width:60px}
+.nav-item.active{color:var(--primary);font-weight:600}
+.nav-item .icon{font-size:1.5rem}
+.view{display:none;padding:16px}
+.view.active{display:block}
+.card{background:var(--card);border-radius:var(--radius);padding:16px;margin-bottom:16px;box-shadow:var(--shadow);border:1px solid rgba(244,162,97,.2)}
+.card-title{font-size:1.1rem;font-weight:700;margin-bottom:12px;color:var(--primary-dark)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:12px 20px;border:none;border-radius:12px;font-size:1rem;font-weight:600;cursor:pointer;text-decoration:none;min-height:48px}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-outline{background:#fff;color:var(--primary);border:2px solid var(--primary)}
+.btn-success{background:var(--success);color:#fff}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-block{width:100%;margin-top:8px}
+.btn-sm{padding:8px 14px;font-size:.9rem;min-height:40px}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-weight:600;margin-bottom:6px;font-size:.95rem}
+.form-control{width:100%;padding:12px 14px;border:2px solid #eee;border-radius:10px;font-size:1rem;background:#fafafa}
+.form-control:focus{outline:none;border-color:var(--primary);background:#fff}
+.stock-item{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #f0f0f0}
+.stock-name{font-weight:600}
+.stock-meta{font-size:.85rem;color:var(--muted)}
+.stock-qty{font-size:1.2rem;font-weight:700;color:var(--primary);min-width:60px;text-align:right}
+.check-item{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid #f5f5f5}
+.check-item input[type=checkbox]{width:24px;height:24px;margin-top:2px;accent-color:var(--success);flex-shrink:0}
+.check-label{flex:1;font-size:.95rem}
+.check-category{font-size:.75rem;color:var(--primary);margin-top:2px}
+#map{height:320px;border-radius:12px;margin-bottom:12px;border:2px solid var(--border);z-index:1;min-height:280px}
+.meeting-point-card{background:#fff5eb;border-left:4px solid var(--primary);padding:12px;margin-bottom:10px;border-radius:0 10px 10px 0}
+.meeting-point-card h4{margin-bottom:4px;color:var(--primary-dark)}
+.radio-card{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:#f8f9fa;border-radius:12px;margin-bottom:8px;border:1px solid #eee}
+.radio-freq{font-size:1.3rem;font-weight:700;color:var(--primary-dark);font-family:monospace}
+.radio-name{font-size:.9rem;color:var(--muted)}
+.emergency-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.emergency-btn{display:flex;flex-direction:column;align-items:center;padding:16px 8px;background:#fff;border:2px solid #eee;border-radius:14px;text-decoration:none;color:var(--text)}
+.emergency-btn .number{font-size:1.5rem;font-weight:800;color:var(--primary-dark)}
+.emergency-btn .name{font-size:.8rem;margin-top:4px}
+.badge{display:inline-block;padding:4px 10px;border-radius:20px;font-size:.75rem;font-weight:600}
+.badge-safe{background:#d8f3dc;color:#1b4332}
+.badge-moving{background:#fff3cd;color:#856404}
+.badge-help{background:#f8d7da;color:#721c24}
+.badge-unknown{background:#e9ecef;color:#495057}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.stat-card{background:#fff;border-radius:14px;padding:16px;text-align:center;box-shadow:var(--shadow)}
+.stat-value{font-size:1.8rem;font-weight:800;color:var(--primary)}
+.stat-label{font-size:.8rem;color:var(--muted);margin-top:4px}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:none;align-items:flex-end;justify-content:center}
+.modal-overlay.show{display:flex!important}
+.modal{background:#fff;width:100%;max-width:500px;max-height:85vh;border-radius:20px 20px 0 0;padding:20px;overflow-y:auto}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.close-btn{background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--muted)}
+.text-muted{color:var(--muted)}.mt-2{margin-top:8px}.mt-3{margin-top:16px}.flex{display:flex}.gap-2{gap:8px}.justify-between{justify-content:space-between}.align-center{align-items:center}.hidden{display:none!important}
+.empty-state{text-align:center;padding:40px 20px;color:var(--muted)}
+.knowledge-item{padding:14px;background:#f8f9fa;border-radius:12px;margin-bottom:10px;border-left:4px solid var(--primary)}
+.knowledge-item h4{margin-bottom:6px;color:var(--primary-dark)}
+.print-card{background:#fff;border:2px dashed var(--primary);padding:20px;border-radius:12px;margin-top:16px}
+#toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(100px);background:#333;color:#fff;padding:12px 24px;border-radius:30px;font-size:.95rem;z-index:300;opacity:0;transition:all .3s;pointer-events:none}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  </style>
+</head>
+<body>
+<header class="app-header">
+  <div style="display:flex;justify-content:space-between;align-items:center;">
+    <div>
+      <h1>🛡️ 安全團聚</h1>
+      <div class="subtitle">有準備，更安全｜臺灣全民安全指引個人版</div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="document.querySelector('[data-view=satellite]').click()"
+              style="background:rgba(255,255,255,0.2);border:none;color:#fff;font-size:1.3rem;width:44px;height:44px;border-radius:12px;cursor:pointer;">
+        🛰️
+      </button>
+      <button onclick="document.querySelector('[data-view=more]').click()"
+              style="background:rgba(255,255,255,0.2);border:none;color:#fff;font-size:1.5rem;width:44px;height:44px;border-radius:12px;cursor:pointer;">
+        ⋯
+      </button>
+    </div>
+  </div>
+</header>
+<div id="view-dashboard" class="view active">
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-value" id="stat-days">—</div><div class="stat-label">口糧可撐天數</div></div>
+    <div class="stat-card"><div class="stat-value" id="stat-mp">0/3</div><div class="stat-label">會合地點</div></div>
+    <div class="stat-card"><div class="stat-value" id="stat-bag">0%</div><div class="stat-label">避難包進度</div></div>
+    <div class="stat-card"><div class="stat-value" id="stat-members">0</div><div class="stat-label">家人人數</div></div>
+  </div>
+  <div class="card"><div id="readiness-tip" style="font-weight:600">載入中…</div></div>
+    <div class="card">
+    <div class="card-title">🌤️ 一週天氣預報</div>
+    <div class="form-group">
+      <label>選擇地區</label>
+      <select id="weather-city" class="form-control" onchange="changeWeatherCity()">
+        <option value="25.0330,121.5654">台北市</option>
+        <option value="25.0110,121.4450">新北市（板橋）</option>
+        <option value="24.9936,121.3010">桃園市</option>
+        <option value="24.8039,120.9710">新竹市</option>
+        <option value="24.1477,120.6736">台中市</option>
+        <option value="23.4801,120.4491">嘉義市</option>
+        <option value="22.9997,120.2270">台南市</option>
+        <option value="22.6273,120.3014">高雄市</option>
+        <option value="22.5519,120.5487">屏東市</option>
+        <option value="24.1470,121.2780">花蓮市</option>
+        <option value="22.7972,121.1240">台東市</option>
+        <option value="25.1500,121.7833">基隆市</option>
+        <option value="23.5710,119.5790">澎湖</option>
+        <option value="24.4340,118.3170">金門</option>
+        <option value="26.1600,119.9500">馬祖</option>
+      </select>
+    </div>
+    <div id="weather-loading" class="text-muted" style="text-align:center;padding:16px;">載入天氣中…</div>
+    <div id="weather-list"></div>
+    <p class="text-muted" style="font-size:.75rem;margin-top:8px;">資料來源：Open-Meteo</p>
+
+    <div style="margin-top:16px;border-top:1px solid #eee;padding-top:12px;">
+      <div style="font-weight:600;margin-bottom:8px;">災害即時資訊</div>
+      <a class="btn btn-outline btn-block" href="https://www.cwa.gov.tw/V8/C/P/Typhoon/TY_NEWS.html" target="_blank">🌀 颱風消息與路徑</a>
+      <a class="btn btn-outline btn-block" href="https://www.cwa.gov.tw/V8/C/P/Typhoon/TY_WARN.html" target="_blank">⚠️ 颱風警報</a>
+      <a class="btn btn-outline btn-block" href="https://www.cwa.gov.tw/V8/C/W/OBS_Radar.html" target="_blank">📡 雷達回波圖</a>
+      <a class="btn btn-outline btn-block" href="https://www.cwa.gov.tw/V8/C/W/OBS_Sat.html" target="_blank">🛰️ 衛星雲圖</a>
+      <a class="btn btn-outline btn-block" href="https://scweb.cwa.gov.tw/" target="_blank">🌍 地震資訊</a>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">官方資源</div>
+    <a class="btn btn-outline btn-block" href="https://prepare.mnd.gov.tw/" target="_blank">官方安全指引網站</a>
+    <a class="btn btn-outline btn-block"
+       href="https://apps.apple.com/tw/app/organic-maps/id1567437057"
+       target="_blank"
+       style="margin-top:8px;">
+      📱 iPhone 建議下載：Organic Maps（可匯入 GPX、離線）
+    </a>
+    <p class="text-muted" style="font-size:.75rem;margin:4px 0 8px;">
+      匯出 GPX 後，可用此 App 開啟會合點；支援離線地圖。
+    </p>
+    <a class="btn btn-outline btn-block" href="https://adr.npa.gov.tw/map" target="_blank">防空避難處所地圖</a>
+    <p class="text-muted mt-2" style="font-size:.85rem">請同時下載「消防防災e點通」App 取得離線地圖、救濟站、配售站位置。</p>
+  </div>
+</div>
+<div id="view-inventory" class="view">
+  <div class="card">
+    <div class="card-title">家庭組成</div>
+    <div class="flex gap-2" style="flex-wrap:wrap">
+      <div class="form-group" style="flex:1;min-width:70px"><label>大人</label><input type="number" id="adults" class="form-control" min="0" value="2"></div>
+      <div class="form-group" style="flex:1;min-width:70px"><label>小孩</label><input type="number" id="children" class="form-control" min="0" value="0"></div>
+      <div class="form-group" style="flex:1;min-width:70px"><label>長者</label><input type="number" id="elderly" class="form-control" min="0" value="0"></div>
+      <div class="form-group" style="flex:1;min-width:70px"><label>寵物</label><input type="number" id="pets" class="form-control" min="0" value="0"></div>
+    </div>
+    <button class="btn btn-primary btn-block" onclick="saveFamilySize()">儲存人數</button>
+    <p class="mt-2 text-muted">建議飲用水：<strong id="recommend-water">—</strong></p>
+  </div>
+  <div class="card">
+    <div class="card-title">目前庫存</div>
+    <div id="inventory-list"></div>
+    <button class="btn btn-primary btn-block mt-3" onclick="openAddInventory()">＋ 新增庫存項目</button>
+  </div>
+</div>
+
+<div id="view-gobag" class="view">
+  <div class="card">
+    <div class="card-title">緊急避難包檢查</div>
+    <p>上次檢查：<strong id="gobag-last">尚未檢查</strong></p>
+    <button class="btn btn-success btn-block" onclick="markGoBagChecked()">標記今日已檢查</button>
+    <p class="text-muted mt-2" style="font-size:.85rem">建議每半年檢查一次。</p>
+  </div>
+  <div id="gobag-list"></div>
+</div>
+
+<div id="view-family" class="view">
+  <div class="card">
+    <div class="card-title">家人狀態</div>
+    <div id="members-list"></div>
+    <button class="btn btn-primary btn-block mt-2" onclick="openAddMember()">＋ 新增家人</button>
+  </div>
+  <div class="card">
+    <div class="card-title">緊急會合地點（最多3處）</div>
+    <div id="meeting-points"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">地圖</div>
+    <div id="map"></div>
+    <p class="text-muted" style="font-size:.8rem;margin-top:8px">
+      地圖需要網路才能顯示。<br>
+      即使地圖打不開，你仍然可以手動輸入「名稱」和「地址」來設定會合地點。
+    </p>
+  </div>
+  <div class="card">
+    <div class="card-title">位置紀錄</div>
+    <button class="btn btn-primary btn-block" onclick="recordWaypoint()">📍 記錄目前位置</button>
+    <div id="waypoints-list" class="mt-3"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">個人防災卡</div>
+    <button class="btn btn-outline btn-block" onclick="generatePrintCard()">產生會合卡</button>
+    <div id="print-card" class="print-card hidden mt-3">
+      <div id="print-card-content"></div>
+      <button class="btn btn-primary btn-block mt-2" onclick="printCard()">列印</button>
+    </div>
+  </div>
+</div>
+
+<div id="view-radio" class="view">
+  <div class="card">
+    <div class="card-title">📻 緊急收音機</div>
+    
+    <!-- 頻率顯示與手調 -->
+    <div style="text-align:center;padding:16px 0;">
+      <div style="font-size:2.4rem;font-weight:800;color:var(--primary-dark);font-family:monospace;" id="freq-display">94.3</div>
+      <div style="font-size:0.9rem;color:var(--muted);margin-bottom:12px;">MHz</div>
+      
+      <div class="flex gap-2 justify-between align-center" style="max-width:280px;margin:0 auto;">
+        <button class="btn btn-outline" style="width:60px;font-size:1.4rem;" onclick="adjustFreq(-0.1)">−</button>
+        <input type="number" id="freq-input" class="form-control" value="94.3" step="0.1" min="87.5" max="108" style="text-align:center;font-size:1.2rem;font-weight:700;" onchange="setFreqFromInput()">
+        <button class="btn btn-outline" style="width:60px;font-size:1.4rem;" onclick="adjustFreq(0.1)">＋</button>
+      </div>
+      
+      <button class="btn btn-primary btn-block mt-3" onclick="openOfficialRadio()">開啟官方線上收聽</button>
+      <p class="text-muted" style="font-size:0.8rem;margin-top:8px;">會依目前頻率開啟最接近的官方收聽頁</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">緊急預設頻道（一鍵收聽）</div>
+    <div id="radio-preset-list"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">政府緊急專線</div>
+    <div class="emergency-grid" id="emergency-grid"></div>
+  </div>
+</div>
+<div id="view-parking" class="view">
+  <div class="card">
+    <div class="card-title">🅿️ 停車場查詢</div>
+    <p class="text-muted" style="font-size:.85rem;margin-bottom:12px">點選後直接開啟停車地圖</p>
+    <a class="btn btn-outline btn-block" href="https://parkboss.tw/map/taipei" target="_blank">台北市停車地圖</a>
+    <a class="btn btn-outline btn-block" href="https://parkboss.tw/map/newtaipei" target="_blank">新北市停車地圖</a>
+    <a class="btn btn-outline btn-block" href="https://parkboss.tw/map/taichung" target="_blank">台中市停車地圖</a>
+    <a class="btn btn-outline btn-block" href="https://parkboss.tw/map/kaohsiung" target="_blank">高雄市停車地圖</a>
+    <a class="btn btn-outline btn-block" href="https://parkboss.tw/" target="_blank">全台停車地圖總覽</a>
+  </div>
+</div>
+<div id="view-satellite" class="view">
+  <div class="card">
+    <div class="card-title">🛰️ 衛星與空拍參考</div>
+    <p class="text-muted" style="font-size:.85rem;margin-bottom:12px;">
+      以下不是真正直播。逃難請以官方警報、廣播與路況為準。
+    </p>
+
+    <a class="btn btn-outline btn-block" href="https://www.cwa.gov.tw/V8/C/W/OBS_Sat.html" target="_blank">
+      氣象署衛星雲圖
+    </a>
+    <p class="text-muted" style="font-size:.75rem;margin:4px 0 12px;">大約延遲：10–30 分鐘</p>
+
+    <a class="btn btn-outline btn-block" href="https://www.cwa.gov.tw/V8/C/W/OBS_Radar.html" target="_blank">
+      氣象署雷達回波
+    </a>
+    <p class="text-muted" style="font-size:.75rem;margin:4px 0 12px;">大約延遲：10–15 分鐘</p>
+
+    <a class="btn btn-outline btn-block" href="https://worldview.earthdata.nasa.gov/" target="_blank">
+      NASA Worldview 衛星圖
+    </a>
+    <p class="text-muted" style="font-size:.75rem;margin:4px 0 12px;">大約延遲：數小時（視圖層而定）</p>
+
+    <a class="btn btn-outline btn-block" href="https://www.google.com/maps/@23.7,120.9,8z/data=!3m1!1e3" target="_blank">
+      Google 衛星地圖（台海附近）
+    </a>
+    <p class="text-muted" style="font-size:.75rem;margin:4px 0 12px;">通常為歷史影像，不是即時</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🌍 地震速報說明</div>
+    <p style="font-size:.9rem;margin-bottom:10px;">
+      地震有機會在強烈搖晃前，提前幾秒到數十秒發出警報（愈靠近震央，預警時間愈短）。
+    </p>
+    <p class="text-muted" style="font-size:.85rem;margin-bottom:12px;">
+      網頁本身無法取代手機系統的官方地震警報。請確認手機有開啟災害／地震通知。
+    </p>
+
+     <a class="btn btn-outline btn-block" href="https://www.cwa.gov.tw/V8/C/E/index.html" target="_blank">
+      氣象署地震專區
+    </a>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🚨 地震監測與警報</div>
+    <p class="text-muted" style="font-size:.85rem;margin-bottom:10px;">
+      App 開啟時可檢查最新地震；若發現新的較大地震會發出警報聲。
+      <br>這不能完全取代官方秒級速報，請仍開啟手機系統通知。
+    </p>
+    <div id="eq-status" class="text-muted" style="margin-bottom:10px;">尚未開始監測</div>
+    <button class="btn btn-primary btn-block" onclick="startEarthquakeMonitor()">開啟地震監測</button>
+    <button class="btn btn-outline btn-block" onclick="stopEarthquakeMonitor()">停止監測</button>
+    <button class="btn btn-danger btn-block" onclick="testEarthquakeAlarm()">測試警報聲</button>
+    <div id="eq-list" class="mt-3"></div>
+    <button class="btn btn-outline btn-block mt-2" onclick="clearEarthquakeList()">清除地震紀錄</button>
+  </div>
+  <audio id="eq-alarm" preload="auto">
+  <source src="https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3" type="audio/mpeg">
+</audio>
+</div>
+<div id="view-more" class="view">
+  <div class="card">
+    <div class="card-title">資料備份與還原</div>
+    <button class="btn btn-primary btn-block" onclick="exportData()">匯出備份</button>
+    <label class="btn btn-outline btn-block mt-2" style="cursor:pointer">
+      匯入備份
+      <input type="file" accept=".json" onchange="importData(event)" style="display:none">
+    </label>
+    <button class="btn btn-outline btn-block mt-2" onclick="exportMeetingPointsGPX()">📍 匯出會合點 GPX</button>
+    <button class="btn btn-outline btn-block mt-2" onclick="copyMeetingPointsText()">📋 複製會合點文字</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🗺️ 下載離線地圖</div>
+    <p class="text-muted" style="font-size:.85rem;margin-bottom:12px;">
+      本 App 地圖需要網路。請先在手機下載離線地圖，逃難時較能導航。
+    </p>
+
+    <a class="btn btn-primary btn-block" href="https://support.apple.com/zh-tw/HT213884" target="_blank">
+      📱 iPhone 離線地圖教學（Apple 地圖）
+    </a>
+    <a class="btn btn-outline btn-block" href="maps://maps.apple.com/">
+      開啟 iPhone「地圖」App
+    </a>
+
+    <a class="btn btn-primary btn-block" href="https://support.google.com/maps/answer/6291106?hl=zh-Hant" target="_blank" style="margin-top:12px;">
+      🤖 Android 離線地圖教學（Google 地圖）
+    </a>
+    <a class="btn btn-outline btn-block" href="https://maps.google.com/">
+      開啟 Android「Google 地圖」
+    </a>
+
+    <div class="knowledge-item" style="margin-top:12px;">
+      <h4>建議下載範圍</h4>
+      <p style="font-size:.9rem;">
+        住家周邊、工作地、三個會合點、常走省道／國道交流道附近。
+      </p>
+    </div>
+
+    <a class="btn btn-outline btn-block" href="https://adr.npa.gov.tw/map" target="_blank">
+      防空避難處所地圖
+    </a>
+  </div>
+
+  <div class="card">
+    <div class="card-title">重要提醒</div>
+    <div class="knowledge-item">
+      <h4>假訊息「3不1要」</h4>
+      <p>不製造、不輕信、不轉傳，要查證。任何「國家戰敗或政府投降」的訊息都是假的。</p>
+    </div>
+    <div class="knowledge-item">
+      <h4>防空警報</h4>
+      <p>1長聲2短聲（長15秒、短5秒，間隔5秒，循環3次）。優先進入地下室或防空避難設施。</p>
+    </div>
+  </div>
+</div>
+<nav class="bottom-nav">
+  <button class="nav-item active" data-view="dashboard"><span class="icon">🏠</span>首頁</button>
+  <button class="nav-item" data-view="inventory"><span class="icon">📦</span>庫存</button>
+  <button class="nav-item" data-view="gobag"><span class="icon">🎒</span>避難包</button>
+  <button class="nav-item" data-view="family"><span class="icon">👨‍👩‍👧‍👦</span>團聚</button>
+  <button class="nav-item" data-view="radio"><span class="icon">📻</span>通訊</button>
+  <button class="nav-item" data-view="parking"><span class="icon">🅿️</span>停車</button>
+  <button class="nav-item" data-view="satellite" style="display:none;"><span class="icon">🛰️</span>衛星</button>
+  <button class="nav-item" data-view="more" style="display:none;"><span class="icon">⋯</span>更多</button>
+</nav>
+<div id="inventory-modal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header"><h3 id="inv-modal-title">新增庫存</h3><button class="close-btn" onclick="closeModal('inventory-modal')">×</button></div>
+    <input type="hidden" id="inv-idx">
+    <div class="form-group"><label>品名</label><input type="text" id="inv-name" class="form-control" placeholder="例如：瓶裝水"></div>
+    <div class="form-group"><label>數量</label><input type="text" id="inv-qty" class="form-control" placeholder="例如：24"></div>
+    <div class="form-group"><label>單位</label><input type="text" id="inv-unit" class="form-control" placeholder="例如：公升 / 瓶 / 份"></div>
+    <div class="form-group"><label>分類</label>
+      <select id="inv-category" class="form-control">
+        <option value="water">飲用水</option>
+        <option value="food">主食與乾糧</option>
+        <option value="meds">藥品</option>
+        <option value="hygiene">衛生用品</option>
+        <option value="firstaid">急救用品</option>
+        <option value="baby">嬰兒用品</option>
+        <option value="elderly">年長者用品</option>
+        <option value="pet">寵物用品</option>
+        <option value="other">其他</option>
+      </select>
+    </div>
+    <div class="form-group"><label>保存期限</label><input type="date" id="inv-expiry" class="form-control"></div>
+    <div class="form-group"><label>備註</label><input type="text" id="inv-notes" class="form-control"></div>
+    <button class="btn btn-primary btn-block" onclick="saveInventoryItem()">儲存</button>
+    <button class="btn btn-danger btn-block mt-2" onclick="deleteInventoryItem()">刪除</button>
+  </div>
+</div>
+
+<div id="member-modal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header"><h3 id="member-modal-title">新增家人</h3><button class="close-btn" onclick="closeModal('member-modal')">×</button></div>
+    <input type="hidden" id="member-idx">
+    <div class="form-group"><label>姓名</label><input type="text" id="member-name" class="form-control"></div>
+    <div class="form-group"><label>電話</label><input type="tel" id="member-phone" class="form-control"></div>
+    <div class="form-group"><label>特殊需求</label><input type="text" id="member-needs" class="form-control" placeholder="例如：洗腎、長者"></div>
+    <button class="btn btn-primary btn-block" onclick="saveMember()">儲存</button>
+  </div>
+</div>
+
+<div id="mp-modal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header"><h3>編輯會合地點</h3><button class="close-btn" onclick="closeModal('mp-modal')">×</button></div>
+    <input type="hidden" id="mp-idx">
+    <div class="form-group"><label>名稱</label><input type="text" id="mp-name" class="form-control" placeholder="例如：家附近公園"></div>
+    <div class="form-group"><label>地址</label><input type="text" id="mp-address" class="form-control" placeholder="例如：台北市中正區重慶南路一段122號"></div>
+<button class="btn btn-outline btn-block" onclick="geocodeAddress()">🔍 地址轉經緯度</button>
+<div class="form-group"><label>緯度</label><input type="text" id="mp-lat" class="form-control" placeholder="可手動輸入或定位"></div>
+<div class="form-group"><label>經度</label><input type="text" id="mp-lng" class="form-control"></div>
+<button class="btn btn-outline btn-block" onclick="useCurrentLocationForMP()">📍 使用目前位置</button>
+    <div class="form-group mt-2"><label>備註</label><input type="text" id="mp-notes" class="form-control" placeholder="例如：大樹下"></div>
+    <button class="btn btn-primary btn-block" onclick="saveMeetingPoint()">儲存</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// 電台資料
+const RADIO_PRESETS = [
+  {name:"警廣 全國治安交通網", freq:104.9, url:"https://www.pbs.gov.tw/live/pbs.html"},
+  {name:"警廣 台北分台", freq:94.3, url:"https://www.pbs.gov.tw/live/tps.html"},
+  {name:"警廣 台中分台", freq:94.5, url:"https://www.pbs.gov.tw/live/tcs.html"},
+  {name:"警廣 高雄分台", freq:93.1, url:"https://www.pbs.gov.tw/live/kss.html"},
+  {name:"警廣 宜蘭分台", freq:101.3, url:"https://www.pbs.gov.tw/live/els.html"},
+  {name:"漢聲廣播電台", freq:106.5, url:"https://www.voh.com.tw/TW/Program/ugC_AMFM.aspx"}
+];
+
+let currentFreq = 94.3;
+const EMERGENCY_NUMBERS = [
+  {name:"警政專線",number:"110"},{name:"消防專線",number:"119"},{name:"緊急救難",number:"112"},
+  {name:"海巡專線",number:"118"},{name:"安心關懷",number:"1925"},{name:"長照服務",number:"1966"},
+  {name:"金融服務",number:"1998"},{name:"縣市政府",number:"1999"}
+];
+
+// 避難包清單
+const GO_BAG_CHECKLIST = {
+  general:{title:"整體準備",items:[
+    {id:"water",name:"飲用水兩瓶 600ml×2",category:"緊急糧食飲水"},
+    {id:"dryfood",name:"餅乾、巧克力、防災食品等乾糧",category:"緊急糧食飲水"},
+    {id:"meds",name:"個人用醫藥品（每日服用藥）",category:"醫療清潔品"},
+    {id:"mask",name:"口罩、乾洗手、濕紙巾",category:"醫療清潔品"},
+    {id:"id",name:"身分證、健保卡、存摺影本",category:"貴重物品"},
+    {id:"cash",name:"少許現金、零錢",category:"貴重物品"},
+    {id:"radio",name:"可攜式收音機、手電筒、電池",category:"其他"},
+    {id:"powerbank",name:"行動電源、充電器材",category:"其他"},
+    {id:"shoes",name:"鞋子（輕便耐走）",category:"鞋子"}
+  ]},
+  infant:{title:"嬰幼兒",items:[{id:"baby_food",name:"奶瓶、奶粉、副食品",category:"緊急糧食飲水"},{id:"diaper",name:"尿布、尿褲、嬰兒背帶",category:"醫療清潔品"}]},
+  elderly:{title:"高齡長者",items:[{id:"elderly_food",name:"營養果凍、銀髮友善食品",category:"緊急糧食飲水"},{id:"aid",name:"柺杖、假牙、助聽器、老花眼鏡",category:"其他"}]},
+  pet:{title:"寵物",items:[{id:"pet_food",name:"寵物糧食",category:"緊急糧食飲水"},{id:"pet_cage",name:"外出籠、寵物牽繩",category:"其他"}]}
+};
+
+// 儲存
+const Store = {
+  KEYS:{family:"safety_family",inventory:"safety_inventory",goBag:"safety_gobag",settings:"safety_settings",waypoints:"safety_waypoints"},
+  get(k){try{const r=localStorage.getItem(this.KEYS[k]||k);return r?JSON.parse(r):null}catch(e){return null}},
+  set(k,v){try{localStorage.setItem(this.KEYS[k]||k,JSON.stringify(v));return true}catch(e){return false}},
+  getDefaultFamily(){return{members:[],meetingPoints:[{id:"mp1",name:"",address:"",lat:null,lng:null,notes:""},{id:"mp2",name:"",address:"",lat:null,lng:null,notes:""},{id:"mp3",name:"",address:"",lat:null,lng:null,notes:""}],home:{name:"住家",address:"",lat:null,lng:null}}},
+  getDefaultInventory(){return{familySize:{adults:2,children:0,elderly:0,pets:0},items:[],lastUpdated:null}},
+  getDefaultGoBag(){return{lastChecked:null,checked:{}}},
+  getDefaultSettings(){return{region:"北部地區",targetDays:7}},
+  init(){if(!this.get("family"))this.set("family",this.getDefaultFamily());if(!this.get("inventory"))this.set("inventory",this.getDefaultInventory());if(!this.get("goBag"))this.set("goBag",this.getDefaultGoBag());if(!this.get("settings"))this.set("settings",this.getDefaultSettings());if(!this.get("waypoints"))this.set("waypoints",[])}
+};
+document.addEventListener("DOMContentLoaded",()=>{
+  Store.init();
+  initNavigation();
+  renderInventory();renderGoBag();renderFamily();renderRadio();renderEmergency();updateDashboardStats();renderWaypoints();
+  setTimeout(loadWeather, 600);   // ← 加這一行
+});
+function initNavigation(){document.querySelectorAll(".nav-item").forEach(btn=>{btn.addEventListener("click",()=>{switchView(btn.dataset.view);document.querySelectorAll(".nav-item").forEach(b=>b.classList.remove("active"));btn.classList.add("active")})})}
+function switchView(id){document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));const v=document.getElementById("view-"+id);if(v)v.classList.add("active");if(id==="dashboard"){updateDashboardStats();loadWeather();}if(id==="family"){renderFamily();setTimeout(()=>initMap(),300)}if(id==="inventory")renderInventory();if(id==="gobag")renderGoBag();if(id==="radio")renderRadio();if(id==="more")renderWaypoints()}
+
+function updateDashboardStats(){
+  const inv=Store.get("inventory")||Store.getDefaultInventory(),family=Store.get("family")||Store.getDefaultFamily(),gobag=Store.get("goBag")||Store.getDefaultGoBag();
+  const totalPeople=(inv.familySize.adults||0)+(inv.familySize.children||0)+(inv.familySize.elderly||0);
+  const waterItem=(inv.items||[]).find(i=>i.category==="water");
+  const daysWater=totalPeople>0?Math.floor((waterItem?Number(waterItem.qty)||0:0)/(totalPeople*3)):0;
+  const mpDone=(family.meetingPoints||[]).filter(p=>p.name&&p.name.trim()).length;
+  const totalChecks=Object.keys(gobag.checked||{}).length,checkedCount=Object.values(gobag.checked||{}).filter(Boolean).length;
+  document.getElementById("stat-days").textContent=daysWater>0?daysWater:"—";
+  document.getElementById("stat-mp").textContent=mpDone+"/3";
+  document.getElementById("stat-bag").textContent=totalChecks>0?Math.round(checkedCount/totalChecks*100)+"%":"0%";
+  document.getElementById("stat-members").textContent=(family.members||[]).length;
+  const tip=document.getElementById("readiness-tip");
+  if(daysWater<3||mpDone<2){tip.innerHTML="⚠️ 建議優先完成：飲用水儲備與緊急會合地點設定。";tip.style.color="var(--danger)"}
+  else{tip.innerHTML="✅ 基本準備已完成。";tip.style.color="var(--success)"}
+}
+
+function renderInventory(){
+  const inv=Store.get("inventory")||Store.getDefaultInventory(),settings=Store.get("settings")||Store.getDefaultSettings();
+  document.getElementById("adults").value=inv.familySize.adults||0;document.getElementById("children").value=inv.familySize.children||0;
+  document.getElementById("elderly").value=inv.familySize.elderly||0;document.getElementById("pets").value=inv.familySize.pets||0;
+  const totalPeople=(inv.familySize.adults||0)+(inv.familySize.children||0)+(inv.familySize.elderly||0);
+  document.getElementById("recommend-water").textContent=(totalPeople*3*(settings.targetDays||7))+" 公升（"+(settings.targetDays||7)+"天）";
+  const list=document.getElementById("inventory-list");list.innerHTML="";
+  if(!inv.items||!inv.items.length){list.innerHTML='<div class="empty-state"><p>尚未新增任何庫存</p></div>';return}
+  inv.items.forEach((item,idx)=>{
+    const div=document.createElement("div");div.className="stock-item";
+    div.innerHTML=`<div class="stock-info"><div class="stock-name">${escapeHtml(item.name)}</div><div class="stock-meta">${escapeHtml(item.category||"")} ${item.expiry?"｜效期 "+item.expiry:""}</div></div><div class="stock-qty">${item.qty} ${item.unit||""}</div><button class="btn btn-sm btn-outline" onclick="editInventoryItem(${idx})" style="margin-left:8px">編輯</button>`;
+    list.appendChild(div);
+  });
+}
+function saveFamilySize(){const inv=Store.get("inventory")||Store.getDefaultInventory();inv.familySize={adults:+document.getElementById("adults").value||0,children:+document.getElementById("children").value||0,elderly:+document.getElementById("elderly").value||0,pets:+document.getElementById("pets").value||0};Store.set("inventory",inv);renderInventory();updateDashboardStats();showToast("已更新")}
+function openAddInventory(){document.getElementById("inv-modal-title").textContent="新增庫存";document.getElementById("inv-idx").value="";["inv-name","inv-qty","inv-unit","inv-expiry","inv-notes"].forEach(id=>document.getElementById(id).value="");document.getElementById("inv-category").value="water";const m=document.getElementById("inventory-modal");m.classList.add("show");m.style.display="flex"}
+function editInventoryItem(idx){const inv=Store.get("inventory")||Store.getDefaultInventory(),item=inv.items[idx];if(!item)return;document.getElementById("inv-modal-title").textContent="編輯庫存";document.getElementById("inv-idx").value=idx;document.getElementById("inv-name").value=item.name||"";document.getElementById("inv-qty").value=item.qty||"";document.getElementById("inv-unit").value=item.unit||"";document.getElementById("inv-category").value=item.category||"water";document.getElementById("inv-expiry").value=item.expiry||"";document.getElementById("inv-notes").value=item.notes||"";const m=document.getElementById("inventory-modal");m.classList.add("show");m.style.display="flex"}
+function saveInventoryItem(){const inv=Store.get("inventory")||Store.getDefaultInventory(),idx=document.getElementById("inv-idx").value,item={name:document.getElementById("inv-name").value.trim(),qty:document.getElementById("inv-qty").value,unit:document.getElementById("inv-unit").value.trim(),category:document.getElementById("inv-category").value,expiry:document.getElementById("inv-expiry").value,notes:document.getElementById("inv-notes").value.trim()};if(!item.name){alert("請輸入品名");return}if(idx==="")inv.items.push(item);else inv.items[+idx]=item;Store.set("inventory",inv);closeModal("inventory-modal");renderInventory();updateDashboardStats();showToast("已儲存")}
+function deleteInventoryItem(){const idx=document.getElementById("inv-idx").value;if(idx===""||!confirm("確定刪除？"))return;const inv=Store.get("inventory")||Store.getDefaultInventory();inv.items.splice(+idx,1);Store.set("inventory",inv);closeModal("inventory-modal");renderInventory();updateDashboardStats();showToast("已刪除")}
+
+function renderGoBag(){const gobag=Store.get("goBag")||Store.getDefaultGoBag(),container=document.getElementById("gobag-list");container.innerHTML="";document.getElementById("gobag-last").textContent=gobag.lastChecked?new Date(gobag.lastChecked).toLocaleDateString("zh-TW"):"尚未檢查";[GO_BAG_CHECKLIST.general,GO_BAG_CHECKLIST.infant,GO_BAG_CHECKLIST.elderly,GO_BAG_CHECKLIST.pet].forEach(section=>{const title=document.createElement("h3");title.className="card-title";title.style.marginTop="16px";title.textContent=section.title;container.appendChild(title);section.items.forEach(item=>{const checked=gobag.checked[item.id]||false,div=document.createElement("div");div.className="check-item"+(checked?" checked":"");div.innerHTML=`<input type="checkbox" ${checked?"checked":""} onchange="toggleGoBagItem('${item.id}',this.checked)"><div><div class="check-label">${escapeHtml(item.name)}</div><div class="check-category">${escapeHtml(item.category)}</div></div>`;container.appendChild(div)})})}
+function toggleGoBagItem(id,checked){const gobag=Store.get("goBag")||Store.getDefaultGoBag();gobag.checked[id]=checked;Store.set("goBag",gobag);updateDashboardStats()}
+function markGoBagChecked(){const gobag=Store.get("goBag")||Store.getDefaultGoBag();gobag.lastChecked=new Date().toISOString();Store.set("goBag",gobag);renderGoBag();updateDashboardStats();showToast("已記錄")}
+
+let markers=[];
+function renderFamily(){const family=Store.get("family")||Store.getDefaultFamily(),membersList=document.getElementById("members-list");membersList.innerHTML="";if(!family.members||!family.members.length)membersList.innerHTML='<div class="empty-state"><p>尚未新增家人</p></div>';else family.members.forEach((m,idx)=>{const sc=m.status==="safe"?"badge-safe":m.status==="moving"?"badge-moving":m.status==="help"?"badge-help":"badge-unknown",st=m.status==="safe"?"安全":m.status==="moving"?"移動中":m.status==="help"?"需要協助":"未知",div=document.createElement("div");div.className="card";div.style.padding="12px";div.innerHTML=`<div class="flex justify-between align-center"><div><strong>${escapeHtml(m.name)}</strong><div class="text-muted" style="font-size:.85rem">${escapeHtml(m.phone||"")} ${m.needs?"｜"+escapeHtml(m.needs):""}</div></div><span class="badge ${sc}">${st}</span></div><div class="flex gap-2 mt-2"><button class="btn btn-sm btn-outline" onclick="setMemberStatus(${idx},'safe')">安全</button><button class="btn btn-sm btn-outline" onclick="setMemberStatus(${idx},'moving')">移動中</button><button class="btn btn-sm btn-outline" onclick="setMemberStatus(${idx},'help')">需協助</button><button class="btn btn-sm btn-danger" onclick="deleteMember(${idx})">刪除</button></div>`;membersList.appendChild(div)});const mpContainer=document.getElementById("meeting-points");mpContainer.innerHTML="";(family.meetingPoints||[]).forEach((p,idx)=>{const div=document.createElement("div");div.className="meeting-point-card";div.innerHTML=`<h4>會合地點 ${idx+1} ${p.name?"："+escapeHtml(p.name):"（未設定）"}</h4><div class="text-muted" style="font-size:.9rem">${p.address?escapeHtml(p.address):"尚未填寫地址"}</div>${p.notes?'<div style="font-size:.85rem;margin-top:4px">備註：'+escapeHtml(p.notes)+"</div>":""}<div class="flex gap-2 mt-2"><button class="btn btn-sm btn-primary" onclick="editMeetingPoint(${idx})">編輯</button>${p.lat&&p.lng?`<button class="btn btn-sm btn-success" onclick="navigateTo(${p.lat},${p.lng},'${escapeHtml(p.name||"會合地點")}')">導航</button>`:""}</div>`;mpContainer.appendChild(div)})}
+function openAddMember(){document.getElementById("member-modal-title").textContent="新增家人";document.getElementById("member-idx").value="";document.getElementById("member-name").value="";document.getElementById("member-phone").value="";document.getElementById("member-needs").value="";const m=document.getElementById("member-modal");m.classList.add("show");m.style.display="flex"}
+function saveMember(){const family=Store.get("family")||Store.getDefaultFamily(),idx=document.getElementById("member-idx").value,member={name:document.getElementById("member-name").value.trim(),phone:document.getElementById("member-phone").value.trim(),needs:document.getElementById("member-needs").value.trim(),status:"unknown"};if(!member.name){alert("請輸入姓名");return}if(idx==="")family.members.push(member);else{member.status=family.members[+idx].status||"unknown";family.members[+idx]=member}Store.set("family",family);closeModal("member-modal");renderFamily();updateDashboardStats();showToast("已儲存")}
+function setMemberStatus(idx,status){const family=Store.get("family")||Store.getDefaultFamily();if(family.members[idx]){family.members[idx].status=status;Store.set("family",family);renderFamily()}}
+function deleteMember(idx){if(!confirm("確定刪除？"))return;const family=Store.get("family")||Store.getDefaultFamily();family.members.splice(idx,1);Store.set("family",family);renderFamily();updateDashboardStats()}
+function editMeetingPoint(idx){try{const family=Store.get("family")||Store.getDefaultFamily();if(!family.meetingPoints||!family.meetingPoints[idx]){alert("找不到此會合地點");return}const p=family.meetingPoints[idx];document.getElementById("mp-idx").value=idx;document.getElementById("mp-name").value=p.name||"";document.getElementById("mp-address").value=p.address||"";document.getElementById("mp-lat").value=p.lat||"";document.getElementById("mp-lng").value=p.lng||"";document.getElementById("mp-notes").value=p.notes||"";const modal=document.getElementById("mp-modal");modal.classList.add("show");modal.style.display="flex"}catch(e){alert("開啟編輯時發生錯誤："+e.message)}}
+function saveMeetingPoint(){const family=Store.get("family")||Store.getDefaultFamily(),idx=+document.getElementById("mp-idx").value;family.meetingPoints[idx]={id:"mp"+(idx+1),name:document.getElementById("mp-name").value.trim(),address:document.getElementById("mp-address").value.trim(),lat:document.getElementById("mp-lat").value?+document.getElementById("mp-lat").value:null,lng:document.getElementById("mp-lng").value?+document.getElementById("mp-lng").value:null,notes:document.getElementById("mp-notes").value.trim()};Store.set("family",family);closeModal("mp-modal");renderFamily();updateDashboardStats();if(window.mapInstance)updateMapMarkers();showToast("會合地點已儲存")}
+function useCurrentLocationForMP(){if(!navigator.geolocation){alert("不支援定位");return}showToast("正在取得位置…");navigator.geolocation.getCurrentPosition(pos=>{document.getElementById("mp-lat").value=pos.coords.latitude.toFixed(6);document.getElementById("mp-lng").value=pos.coords.longitude.toFixed(6);showToast("已取得目前位置")},err=>{let msg="無法取得位置。\n\n";if(err.code===1)msg+="請允許位置權限，或手動輸入經緯度。";else msg+=err.message;alert(msg)},{enableHighAccuracy:true,timeout:12000})}
+function geocodeAddress(){
+  const address = document.getElementById("mp-address").value.trim();
+  if(!address){
+    alert("請先輸入地址");
+    return;
+  }
+
+  // 優先用 Apple 地圖搜尋（iPhone 最方便）
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  if(isIOS){
+    // 開啟 Apple 地圖搜尋該地址
+    window.location.href = "maps://maps.apple.com/?q=" + encodeURIComponent(address);
+  } else {
+    // 其他裝置用 Google 地圖
+    window.open("https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(address), "_blank");
+  }
+
+  showToast("已開啟地圖，請在地圖中查看位置");
+}
+function initMap(){
+  const mapEl=document.getElementById("map");if(!mapEl)return;
+  if(typeof L==="undefined"){
+    mapEl.innerHTML=`<div style="padding:30px 20px;text-align:center;color:#666;background:#f5f5f5;border-radius:12px;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px">
+      <div style="font-size:2rem">🗺️</div>
+      <div style="font-weight:600">地圖套件尚未載入</div>
+      <div style="font-size:0.9rem">請確認有網路後，點下方按鈕重試</div>
+      <button onclick="reloadLeaflet()" style="padding:10px 20px;background:#e85d04;color:white;border:none;border-radius:10px;font-size:1rem;font-weight:600;margin-top:8px">重新載入地圖</button>
+    </div>`;return}
+  if(window.mapInstance){setTimeout(()=>{try{window.mapInstance.invalidateSize();updateMapMarkers()}catch(e){}},150);return}
+  try{window.mapInstance=L.map("map").setView([25.0330,121.5654],13);L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap",maxZoom:19}).addTo(window.mapInstance);setTimeout(()=>{window.mapInstance.invalidateSize();updateMapMarkers()},250)}
+  catch(e){mapEl.innerHTML=`<div style="padding:30px;text-align:center;color:#666">地圖載入失敗<br><button onclick="reloadLeaflet()" style="margin-top:12px;padding:8px 16px;background:#e85d04;color:white;border:none;border-radius:8px">重試</button></div>`}
+}
+function reloadLeaflet(){
+  const mapEl=document.getElementById("map");if(mapEl)mapEl.innerHTML='<div style="padding:40px;text-align:center;color:#666">正在載入地圖套件…</div>';
+  const old=document.getElementById("leaflet-script");if(old)old.remove();
+  const script=document.createElement("script");script.id="leaflet-script";
+  script.src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js";
+  script.onload=function(){window.mapInstance=null;initMap()};
+  script.onerror=function(){if(mapEl)mapEl.innerHTML=`<div style="padding:30px;text-align:center;color:#666">地圖套件載入失敗，請檢查網路後再試<br><button onclick="reloadLeaflet()" style="margin-top:12px;padding:8px 16px;background:#e85d04;color:white;border:none;border-radius:8px">再試一次</button></div>`};
+  document.head.appendChild(script);
+}
+function updateMapMarkers(){if(!window.mapInstance||typeof L==="undefined")return;markers.forEach(m=>window.mapInstance.removeLayer(m));markers=[];const family=Store.get("family")||Store.getDefaultFamily(),points=[];(family.meetingPoints||[]).forEach((p,idx)=>{if(p.lat&&p.lng){const marker=L.marker([p.lat,p.lng]).addTo(window.mapInstance).bindPopup(`<b>會合地點 ${idx+1}</b><br>${p.name||""}<br>${p.address||""}`);markers.push(marker);points.push([p.lat,p.lng])}});if(points.length)window.mapInstance.fitBounds(points,{padding:[40,40]})}
+function navigateTo(lat,lng,name){if(!lat||!lng){alert("尚未設定經緯度");return}const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);window.location.href=isIOS?`maps://maps.apple.com/?daddr=${lat},${lng}&q=${encodeURIComponent(name||"會合地點")}`:`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=walking`}
+function recordWaypoint(){if(!navigator.geolocation){alert("不支援定位");return}navigator.geolocation.getCurrentPosition(pos=>{const waypoints=Store.get("waypoints")||[],note=prompt("備註（可留空）")||"";waypoints.unshift({lat:pos.coords.latitude,lng:pos.coords.longitude,time:new Date().toISOString(),note});if(waypoints.length>50)waypoints.length=50;Store.set("waypoints",waypoints);showToast("已記錄");renderWaypoints()},err=>alert("定位失敗："+err.message),{enableHighAccuracy:true})}
+function renderWaypoints(){const list=document.getElementById("waypoints-list");if(!list)return;const waypoints=Store.get("waypoints")||[];list.innerHTML="";if(!waypoints.length){list.innerHTML='<p class="text-muted">尚未記錄任何位置</p>';return}waypoints.slice(0,10).forEach((w,idx)=>{const div=document.createElement("div");div.className="radio-card";div.innerHTML=`<div><div style="font-size:.9rem">${new Date(w.time).toLocaleString("zh-TW")}</div><div class="text-muted" style="font-size:.8rem">${w.note||"無備註"}</div></div><div class="flex gap-2"><button class="btn btn-sm btn-outline" onclick="navigateTo(${w.lat},${w.lng},'記錄點')">導航</button><button class="btn btn-sm btn-danger" onclick="deleteWaypoint(${idx})">刪除</button></div>`;list.appendChild(div)})}
+function deleteWaypoint(idx){if(!confirm("確定要刪除這筆位置紀錄嗎？"))return;const waypoints=Store.get("waypoints")||[];waypoints.splice(idx,1);Store.set("waypoints",waypoints);renderWaypoints();showToast("已刪除")}
+function renderRadio(){
+  const list = document.getElementById("radio-preset-list");
+  if(!list) return;
+  list.innerHTML = "";
+  RADIO_PRESETS.forEach(ch => {
+    const div = document.createElement("div");
+    div.className = "radio-card";
+    div.innerHTML = `
+      <div>
+        <div class="radio-freq">${ch.freq} FM</div>
+        <div class="radio-name">${ch.name}</div>
+      </div>
+      <button class="btn btn-sm btn-primary" onclick="playPreset(${ch.freq}, '${ch.url}')">收聽</button>
+    `;
+    list.appendChild(div);
+  });
+  document.getElementById("freq-display").textContent = currentFreq.toFixed(1);
+  document.getElementById("freq-input").value = currentFreq.toFixed(1);
+}
+
+function adjustFreq(delta){
+  currentFreq = Math.round((currentFreq + delta) * 10) / 10;
+  if(currentFreq < 87.5) currentFreq = 87.5;
+  if(currentFreq > 108) currentFreq = 108;
+  document.getElementById("freq-display").textContent = currentFreq.toFixed(1);
+  document.getElementById("freq-input").value = currentFreq.toFixed(1);
+}
+
+function setFreqFromInput(){
+  let val = parseFloat(document.getElementById("freq-input").value);
+  if(isNaN(val)) val = 94.3;
+  if(val < 87.5) val = 87.5;
+  if(val > 108) val = 108;
+  currentFreq = Math.round(val * 10) / 10;
+  document.getElementById("freq-display").textContent = currentFreq.toFixed(1);
+  document.getElementById("freq-input").value = currentFreq.toFixed(1);
+}
+
+function playPreset(freq, url){
+  currentFreq = freq;
+  document.getElementById("freq-display").textContent = freq.toFixed(1);
+  document.getElementById("freq-input").value = freq.toFixed(1);
+  window.open(url, "_blank");
+  showToast("已開啟官方線上收聽");
+}
+
+function openOfficialRadio(){
+  let closest = RADIO_PRESETS[0];
+  let minDiff = Math.abs(currentFreq - closest.freq);
+  RADIO_PRESETS.forEach(ch => {
+    const diff = Math.abs(currentFreq - ch.freq);
+    if(diff < minDiff){
+      minDiff = diff;
+      closest = ch;
+    }
+  });
+  if(minDiff <= 0.3){
+    window.open(closest.url, "_blank");
+    showToast(`已開啟最接近的頻道：${closest.name}`);
+  } else {
+    window.open("https://www.pbs.gov.tw/live/pbs.html", "_blank");
+    showToast("已開啟警廣全國治安交通網");
+  }
+}
+function renderEmergency(){const grid=document.getElementById("emergency-grid");grid.innerHTML="";EMERGENCY_NUMBERS.forEach(n=>{const a=document.createElement("a");a.className="emergency-btn";a.href="tel:"+n.number;a.innerHTML=`<div class="number">${n.number}</div><div class="name">${n.name}</div>`;grid.appendChild(a)})}
+
+function closeModal(id){const el=document.getElementById(id);if(el){el.classList.remove("show");el.style.display="none"}}
+function showToast(msg){const toast=document.getElementById("toast");toast.textContent=msg;toast.classList.add("show");setTimeout(()=>toast.classList.remove("show"),2200)}
+function escapeHtml(str){if(!str)return"";return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}
+function exportData(){const data={family:Store.get("family"),inventory:Store.get("inventory"),goBag:Store.get("goBag"),settings:Store.get("settings"),waypoints:Store.get("waypoints"),exportedAt:new Date().toISOString(),version:1};const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`安全團聚備份_${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(url);showToast("已匯出")}
+function importData(event){const file=event.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=e=>{try{const data=JSON.parse(e.target.result);if(data.family)Store.set("family",data.family);if(data.inventory)Store.set("inventory",data.inventory);if(data.goBag)Store.set("goBag",data.goBag);if(data.settings)Store.set("settings",data.settings);if(data.waypoints)Store.set("waypoints",data.waypoints);showToast("匯入成功");setTimeout(()=>location.reload(),1000)}catch(err){alert("檔案格式錯誤")}};reader.readAsText(file)}
+function generatePrintCard(){const family=Store.get("family")||Store.getDefaultFamily();let html='<h3 style="text-align:center;margin-bottom:12px">緊急會合卡</h3>';(family.meetingPoints||[]).forEach((p,i)=>{if(p.name)html+=`<div style="margin-bottom:10px;padding:8px;border:1px solid #ccc;border-radius:8px"><strong>會合點 ${i+1}：${escapeHtml(p.name)}</strong><br>${escapeHtml(p.address||"")}<br>${p.notes?"備註："+escapeHtml(p.notes):""}</div>`});html+='<h4 style="margin-top:16px">重要聯絡人</h4>';(family.members||[]).forEach(m=>{html+=`<div>${escapeHtml(m.name)} ${escapeHtml(m.phone||"")}</div>`});document.getElementById("print-card-content").innerHTML=html;document.getElementById("print-card").classList.remove("hidden")}
+// ===== 天氣預報 =====
+const WEATHER_CODES = {
+  0: "☀️ 晴",
+  1: "🌤 多雲時晴",
+  2: "⛅ 多雲",
+  3: "☁️ 陰",
+  45: "🌫 有霧",
+  48: "🌫 霧",
+  51: "🌦 毛毛雨",
+  53: "🌦 毛毛雨",
+  55: "🌧 雨",
+  61: "🌧 小雨",
+  63: "🌧 中雨",
+  65: "🌧 大雨",
+  80: "🌦 陣雨",
+  81: "🌧 陣雨",
+  82: "⛈ 強陣雨",
+  95: "⛈ 雷雨",
+  96: "⛈ 雷雨伴冰雹",
+  99: "⛈ 強雷雨"
+};
+
+function getWeatherCity() {
+  const saved = localStorage.getItem("weather_city");
+  return saved || "25.0330,121.5654";
+}
+
+function changeWeatherCity() {
+  const val = document.getElementById("weather-city").value;
+  localStorage.setItem("weather_city", val);
+  loadWeather();
+}
+
+function loadWeather() {
+  const list = document.getElementById("weather-list");
+  const loading = document.getElementById("weather-loading");
+  const citySelect = document.getElementById("weather-city");
+  
+  if (!list || !loading) return;
+
+  const cityVal = getWeatherCity();
+  if (citySelect) citySelect.value = cityVal;
+
+  const [lat, lon] = cityVal.split(",");
+  loading.style.display = "block";
+  list.innerHTML = "";
+
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Asia%2FTaipei&forecast_days=7`;
+
+  fetch(url)
+    .then(r => r.json())
+    .then(data => {
+      loading.style.display = "none";
+      if (!data.daily) {
+        list.innerHTML = '<p class="text-muted">無法取得天氣資料</p>';
+        return;
+      }
+
+      const days = ["日", "一", "二", "三", "四", "五", "六"];
+      let html = "";
+
+      for (let i = 0; i < data.daily.time.length; i++) {
+        const date = new Date(data.daily.time[i]);
+        const weekDay = days[date.getDay()];
+        const dateStr = `${date.getMonth() + 1}/${date.getDate()}（${weekDay}）`;
+        const code = data.daily.weathercode[i];
+        const weatherText = WEATHER_CODES[code] || "未知";
+        const maxT = Math.round(data.daily.temperature_2m_max[i]);
+        const minT = Math.round(data.daily.temperature_2m_min[i]);
+        const rain = data.daily.precipitation_probability_max[i];
+
+        html += `
+          <div class="radio-card" style="margin-bottom:8px;">
+            <div>
+              <div style="font-weight:600;">${dateStr}</div>
+              <div style="font-size:0.9rem;">${weatherText}</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-weight:700;color:var(--primary);">${minT}° ~ ${maxT}°</div>
+              <div class="text-muted" style="font-size:0.8rem;">降雨 ${rain}%</div>
+            </div>
+          </div>
+        `;
+      }
+      list.innerHTML = html;
+    })
+    .catch(err => {
+      loading.style.display = "none";
+      list.innerHTML = '<p class="text-muted">天氣載入失敗，請確認有網路</p>';
+    });
+}
+
+function printCard(){window.print()}
+
+let eqTimer = null;
+let lastEqId = localStorage.getItem("last_eq_id") || "";
+
+function startEarthquakeMonitor(){
+  const status = document.getElementById("eq-status");
+  if(status) status.textContent = "監測中…（每 60 秒檢查一次）";
+  checkEarthquake();
+  if(eqTimer) clearInterval(eqTimer);
+  eqTimer = setInterval(checkEarthquake, 60000);
+  showToast("已開啟地震監測");
+}
+
+function stopEarthquakeMonitor(){
+  if(eqTimer) clearInterval(eqTimer);
+  eqTimer = null;
+  const status = document.getElementById("eq-status");
+  if(status) status.textContent = "已停止監測";
+  showToast("已停止監測");
+}
+
+function testEarthquakeAlarm(){
+  playEarthquakeAlarm();
+  showToast("測試警報聲");
+}
+
+function playEarthquakeAlarm(){
+  // iPhone 用 Web Audio 產生警報聲（不依賴外部 mp3）
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (AudioCtx) {
+      const ctx = new AudioCtx();
+      if (ctx.state === "suspended") ctx.resume();
+
+      const beep = function(start, freq, duration) {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "square";
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(0.3, start + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(start);
+        osc.stop(start + duration + 0.05);
+      };
+
+      const now = ctx.currentTime;
+      beep(now, 880, 0.25);
+      beep(now + 0.3, 880, 0.25);
+      beep(now + 0.6, 880, 0.4);
+      beep(now + 1.1, 988, 0.5);
+    }
+  } catch (e) {}
+
+  // 仍嘗試播放 audio 標籤（若有）
+  const audio = document.getElementById("eq-alarm");
+  if (audio) {
+    audio.currentTime = 0;
+    audio.play().catch(function(){});
+  }
+
+  if (navigator.vibrate) {
+    navigator.vibrate([500, 200, 500, 200, 800]);
+  }
+
+  if (window.Notification && Notification.permission === "granted") {
+    new Notification("地震警報", {
+      body: "偵測到較大地震，請立即趴下、掩護、穩住。"
+    });
+  }
+}
+function checkEarthquake(){
+  const url = "https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&minlatitude=21&maxlatitude=26&minlongitude=119&maxlongitude=123&orderby=time&limit=5";
+
+  function toChinesePlace(place){
+    if(!place) return "台灣附近";
+    let p = place;
+    // 常見地名英翻中
+    const map = [
+      ["Hualien City", "花蓮市"],
+      ["Hualien", "花蓮"],
+      ["Yilan", "宜蘭"],
+      ["Taitung", "台東"],
+      ["Taipei", "台北"],
+      ["New Taipei", "新北"],
+      ["Taoyuan", "桃園"],
+      ["Taichung", "台中"],
+      ["Tainan", "台南"],
+      ["Kaohsiung", "高雄"],
+      ["Pingtung", "屏東"],
+      ["Nantou", "南投"],
+      ["Chiayi", "嘉義"],
+      ["Miaoli", "苗栗"],
+      ["Changhua", "彰化"],
+      ["Yunlin", "雲林"],
+      ["Keelung", "基隆"],
+      ["Penghu", "澎湖"],
+      ["Taiwan", "台灣"],
+      ["km ESE of", "公里東南方，"],
+      ["km E of", "公里東方，"],
+      ["km ES of", "公里東南方，"],
+      ["km SE of", "公里東南方，"],
+      ["km S of", "公里南方，"],
+      ["km SW of", "公里西南方，"],
+      ["km W of", "公里西方，"],
+      ["km NW of", "公里西北方，"],
+      ["km N of", "公里北方，"],
+      ["km NE of", "公里東北方，"],
+      ["km SSE of", "公里南南東方，"],
+      ["km SSW of", "公里南南西方，"],
+      ["km WNW of", "公里西北西方，"],
+      ["km WSW of", "公里西南西方，"],
+      ["km NNW of", "公里北北西方，"],
+      ["km NNE of", "公里北北東方，"]
+    ];
+    map.forEach(function(pair){
+      p = p.replace(pair[0], pair[1]);
+    });
+    return p;
+  }
+
+  fetch(url)
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      const list = document.getElementById("eq-list");
+      const status = document.getElementById("eq-status");
+
+      if(!data || !data.features || !data.features.length){
+        if(status) status.textContent = "目前無新資料";
+        return;
+      }
+
+      const newest = data.features[0];
+      const id = newest.id;
+      const mag = newest.properties.mag;
+      const place = toChinesePlace(newest.properties.place);
+      const time = new Date(newest.properties.time).toLocaleString("zh-TW");
+
+      if(list){
+        list.innerHTML = data.features.map(function(f){
+          const m = f.properties.mag;
+          const p = toChinesePlace(f.properties.place);
+          const t = new Date(f.properties.time).toLocaleString("zh-TW");
+          return '<div class="radio-card"><div><div style="font-weight:700;">規模 ' + m + '</div><div class="text-muted" style="font-size:.85rem;">位置：' + p + '</div></div><div class="text-muted" style="font-size:.8rem;">' + t + '</div></div>';
+        }).join("");
+      }
+
+      if(status) status.textContent = "最後檢查：" + new Date().toLocaleTimeString("zh-TW");
+
+      if(id !== lastEqId && mag >= 4.5){
+        lastEqId = id;
+        localStorage.setItem("last_eq_id", id);
+        playEarthquakeAlarm();
+        alert("地震警報\n規模：" + mag + "\n位置：" + place + "\n時間：" + time + "\n\n請立即：趴下、掩護、穩住");
+      }
+    })
+    .catch(function(){
+      const status = document.getElementById("eq-status");
+      if(status) status.textContent = "地震資料讀取失敗（需網路）";
+    });
+}
+
+function clearEarthquakeList(){
+  const list = document.getElementById("eq-list");
+  if(list) list.innerHTML = "";
+  lastEqId = "";
+  localStorage.removeItem("last_eq_id");
+  const status = document.getElementById("eq-status");
+  if(status && !eqTimer){
+    status.textContent = "尚未開始監測";
+  }
+  showToast("已清除地震紀錄");
+}
+function exportMeetingPointsGPX(){
+  const family = Store.get("family") || Store.getDefaultFamily();
+  const points = (family.meetingPoints || []).filter(function(p){
+    return p.lat && p.lng;
+  });
+  if(!points.length){
+    alert("目前沒有已設定經緯度的會合點。\n請先到「團聚」編輯會合點並填入座標。");
+    return;
+  }
+  let gpx = '<?xml version="1.0" encoding="UTF-8"?>\n';
+  gpx += '<gpx version="1.1" creator="安全團聚" xmlns="http://www.topografix.com/GPX/1/1">\n';
+  points.forEach(function(p, i){
+    const name = (p.name || ("會合點" + (i + 1))).replace(/[<>&]/g, "");
+    const desc = ((p.address || "") + (p.notes ? " " + p.notes : "")).replace(/[<>&]/g, "");
+    gpx += '  <wpt lat="' + p.lat + '" lon="' + p.lng + '">\n';
+    gpx += "    <name>" + name + "</name>\n";
+    if(desc) gpx += "    <desc>" + desc + "</desc>\n";
+    gpx += "  </wpt>\n";
+  });
+  gpx += "</gpx>";
+  const blob = new Blob([gpx], {type: "application/gpx+xml"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "安全團聚_會合點_" + new Date().toISOString().slice(0,10) + ".gpx";
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast("已匯出 GPX");
+}
+
+function copyMeetingPointsText(){
+  const family = Store.get("family") || Store.getDefaultFamily();
+  const points = family.meetingPoints || [];
+  const members = family.members || [];
+  let text = "【安全團聚・緊急會合資訊】\n\n";
+  text += "■ 會合地點\n";
+  let hasPoint = false;
+  points.forEach(function(p, i){
+    if(!p.name && !p.address && !p.lat) return;
+    hasPoint = true;
+    text += (i + 1) + ". " + (p.name || "（未命名）") + "\n";
+    if(p.address) text += "   地址：" + p.address + "\n";
+    if(p.lat && p.lng) text += "   座標：" + p.lat + ", " + p.lng + "\n";
+    if(p.notes) text += "   備註：" + p.notes + "\n";
+    text += "\n";
+  });
+  if(!hasPoint) text += "（尚未設定）\n\n";
+  text += "■ 重要聯絡人\n";
+  if(members.length){
+    members.forEach(function(m){
+      text += (m.name || "") + " " + (m.phone || "") + (m.needs ? "（" + m.needs + "）" : "") + "\n";
+    });
+  } else {
+    text += "（尚未新增）\n";
+  }
+  text += "\n請家人各自下載手機離線地圖，並保存此資訊。";
+
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(function(){
+      showToast("已複製會合點文字");
+    }).catch(function(){
+      fallbackCopy(text);
+    });
+  } else {
+    fallbackCopy(text);
+  }
+}
+
+function fallbackCopy(text){
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  ta.style.position = "fixed";
+  ta.style.left = "-9999px";
+  document.body.appendChild(ta);
+  ta.select();
+  try{
+    document.execCommand("copy");
+    showToast("已複製會合點文字");
+  }catch(e){
+    alert("複製失敗，請手動選取文字");
+  }
+  document.body.removeChild(ta);
+}
+if(window.Notification && Notification.permission === "default"){
+  Notification.requestPermission();
+}
+</script>
+</body>
+</html>
