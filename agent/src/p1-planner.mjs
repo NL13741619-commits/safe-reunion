@@ -5,10 +5,13 @@ export function parseEditPlan(text) {
   try { value = JSON.parse(String(text)); } catch { return { ok: false, code: 'INVALID_MODEL_PLAN' }; }
   if (!value || !Array.isArray(value.edits) || value.edits.length < 1 || value.edits.length > 8) return { ok: false, code: 'INVALID_MODEL_PLAN' };
   const edits = [];
+  const seen = new Set();
   try {
     for (const edit of value.edits) {
       if (!edit || edit.op !== 'replace_file') throw new Error('OP_DENIED');
       const path = assertWorkspacePath(edit.path);
+      if (seen.has(path)) throw new Error('DUPLICATE_EDIT_TARGET');
+      seen.add(path);
       const content = String(edit.content ?? '');
       if (content.length > 50_000) throw new Error('CONTENT_TOO_LARGE');
       edits.push({ op: 'replace_file', path, content });
@@ -19,5 +22,5 @@ export function parseEditPlan(text) {
 
 export function summarizePlan(plan) {
   if (!plan?.ok) return { status: 'BLOCKED', reason: plan?.code || 'INVALID_PLAN' };
-  return { status: 'READY_FOR_SANDBOX', files: plan.edits.map(e => e.path), tests: plan.tests, mutation_scope: 'agent/', draft_pr_only: true };
+  return { status: 'READY_FOR_SANDBOX', files: plan.edits.map(e => e.path), tests: plan.tests, mutation_scope: 'agent/src + agent/tests', draft_pr_only: true };
 }
