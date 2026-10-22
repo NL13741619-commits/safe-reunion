@@ -1,0 +1,1 @@
+export class PullRequestBuilder{constructor({github,executionApproved=false}={}){this.github=github;this.executionApproved=executionApproved;}async create(){if(!this.executionApproved)throw new Error('EXECUTION_NOT_APPROVED');throw new Error('PR_MUTATION_NOT_ENABLED');}}
