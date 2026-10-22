@@ -4,7 +4,7 @@ import { runP1MockE2E } from '../src/p1-orchestrator.mjs';
 import { mockZeroCostTransport } from '../src/p1-model-adapter.mjs';
 
 const input={task_id:'P1-E2E',base_branch:'feature/p1-e2e'};
-const env={AIVAULT_MODEL_PROVIDER:'mock',AIVAULT_MODEL_NAME:'contract-test',AIVAULT_MODEL_TOKEN:'test-only'};
+const env={AIVAULT_MODEL_PROVIDER:'mock',AIVAULT_MODEL_NAME:'contract-test',AIVAULT_MOCK_CONTRACT:'1'};
 
 test('mock E2E reaches TESTING with zero mutation', async()=>{
   const output=JSON.stringify({edits:[{op:'replace_file',path:'agent/src/example.mjs',content:'export const ok=true;'}]});
