@@ -4,6 +4,8 @@ import { createTask, transition, claim, recoverExpiredLease, assertLeaseOwner, a
 
 test('task requires feature branch', () => assert.throws(() => createTask({task_id:'x',base_branch:'main'}), /INVALID_TASK/));
 test('task rejects traversal-like feature branch', () => assert.throws(() => createTask({task_id:'x',base_branch:'feature/../main'}), /INVALID_TASK/));
+test('task rejects ambiguous feature branch', () => assert.throws(() => createTask({task_id:'x',base_branch:'feature/x//y'}), /INVALID_TASK/));
+test('task rejects lock-suffixed feature branch', () => assert.throws(() => createTask({task_id:'x',base_branch:'feature/x.lock'}), /INVALID_TASK/));
 test('state machine follows guarded lifecycle', () => { const t=createTask({task_id:'x',base_branch:'feature/x'}); claim(t,'w',0,1000); transition(t,'RUNNING'); transition(t,'TESTING'); transition(t,'PR_OPEN'); transition(t,'DONE'); assert.equal(t.state,'DONE'); });
 test('invalid transition is rejected', () => { const t=createTask({task_id:'x',base_branch:'feature/x'}); assert.throws(() => transition(t,'DONE'), /INVALID_TRANSITION/); });
 test('expired lease recovers to queue', () => { const t=createTask({task_id:'x',base_branch:'feature/x'}); claim(t,'w',0,1000); assert.equal(recoverExpiredLease(t,1001),true); assert.equal(t.state,'QUEUED'); });
