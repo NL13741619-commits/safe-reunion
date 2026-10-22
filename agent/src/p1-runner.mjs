@@ -5,8 +5,9 @@ function validFeatureBranch(branch) {
 }
 
 export function createTask(input) {
-  if (!input?.task_id || !validFeatureBranch(input?.base_branch)) throw new Error('INVALID_TASK');
-  return { task_id: input.task_id, base_branch: input.base_branch, state: 'QUEUED', lease: null, attempts: 0, audit: [] };
+  const taskId = String(input?.task_id || '');
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/.test(taskId) || !validFeatureBranch(input?.base_branch)) throw new Error('INVALID_TASK');
+  return { task_id: taskId, base_branch: input.base_branch, state: 'QUEUED', lease: null, attempts: 0, audit: [] };
 }
 
 export function transition(task, next, detail = '') {
