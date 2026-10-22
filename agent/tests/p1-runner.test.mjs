@@ -14,6 +14,8 @@ test('expired lease cannot be used', () => { const t=createTask({task_id:'x',bas
 test('invalid lease TTL is rejected', () => { const t=createTask({task_id:'x',base_branch:'feature/x'}); assert.throws(()=>claim(t,'w',0,10),/INVALID_LEASE/); });
 test('workspace accepts agent paths only', () => assert.equal(assertWorkspacePath('agent/src/x.mjs'),'agent/src/x.mjs'));
 test('workspace rejects traversal', () => assert.throws(() => assertWorkspacePath('agent/../index.html'), /PATH_DENIED/));
+test('workspace rejects dot segment', () => assert.throws(() => assertWorkspacePath('agent/./src/x.mjs'), /PATH_DENIED/));
+test('workspace rejects repeated separator', () => assert.throws(() => assertWorkspacePath('agent//src/x.mjs'), /PATH_DENIED/));
 test('workspace rejects product root', () => assert.throws(() => assertWorkspacePath('index.html'), /PATH_OUTSIDE_WORKSPACE/));
 test('workspace rejects workflow mutation', () => assert.throws(() => assertWorkspacePath('.github/workflows/x.yml'), /PATH_DENIED/));
 test('kill switch is fail-closed when unset', () => assert.equal(modelGate({}).code,'BLOCKED_KILL_SWITCH'));
