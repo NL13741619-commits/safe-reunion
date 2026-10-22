@@ -1,7 +1,7 @@
 const STATES = new Set(['QUEUED','CLAIMED','RUNNING','TESTING','PR_OPEN','BLOCKED','FAILED','DONE']);
 
 function validFeatureBranch(branch) {
-  return typeof branch === 'string' && /^feature\/[A-Za-z0-9._/-]+$/.test(branch) && !branch.includes('..') && !branch.endsWith('/') && branch !== 'feature/main';
+  return typeof branch === 'string' && /^feature\/[A-Za-z0-9][A-Za-z0-9._/-]*$/.test(branch) && !branch.includes('..') && !branch.includes('//') && !branch.endsWith('/') && !branch.endsWith('.') && !branch.endsWith('.lock') && !branch.includes('@{');
 }
 
 export function createTask(input) {
