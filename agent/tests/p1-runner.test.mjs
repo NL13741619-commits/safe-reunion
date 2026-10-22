@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createTask, transition, claim, recoverExpiredLease, assertLeaseOwner, assertWorkspacePath, modelGate } from '../src/p1-runner.mjs';
+import { createTask, transition, claim, recoverExpiredLease, assertLeaseOwner, assertWorkspacePath, modelGate, buildModelRequest } from '../src/p1-runner.mjs';
 
 test('task requires feature branch', () => assert.throws(() => createTask({task_id:'x',base_branch:'main'}), /INVALID_TASK/));
 test('task rejects traversal-like feature branch', () => assert.throws(() => createTask({task_id:'x',base_branch:'feature/../main'}), /INVALID_TASK/));
@@ -18,3 +18,4 @@ test('model gate blocks missing credentials', () => assert.equal(modelGate({}).c
 test('kill switch wins', () => assert.equal(modelGate({AIVAULT_KILL_SWITCH:'1',AIVAULT_MODEL_PROVIDER:'x',AIVAULT_MODEL_NAME:'y',AIVAULT_MODEL_TOKEN:'z'}).code,'BLOCKED_KILL_SWITCH'));
 test('paid model enablement is denied', () => assert.equal(modelGate({AIVAULT_MODEL_PROVIDER:'x',AIVAULT_MODEL_NAME:'y',AIVAULT_MODEL_TOKEN:'z',AIVAULT_ALLOW_PAID:'1'}).code,'BLOCKED_PAID_MODEL'));
 test('configured zero-cost model passes contract gate', () => assert.equal(modelGate({AIVAULT_MODEL_PROVIDER:'x',AIVAULT_MODEL_NAME:'y',AIVAULT_MODEL_TOKEN:'z'}).ok,true));
+test('model request stays bounded to agent and draft-only policy', () => { const env={AIVAULT_MODEL_PROVIDER:'mock',AIVAULT_MODEL_NAME:'m',AIVAULT_MODEL_TOKEN:'t'}; const r=buildModelRequest({task_id:'x'},'a'.repeat(5000),env); assert.equal(r.ok,true); assert.equal(r.instruction.length,4000); assert.equal(r.mutation_scope,'agent/'); assert.equal(r.direct_main_push,false); assert.equal(r.auto_merge,false); });
