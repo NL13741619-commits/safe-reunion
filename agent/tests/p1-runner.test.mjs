@@ -10,7 +10,9 @@ test('task rejects ambiguous feature branch', () => assert.throws(() => createTa
 test('task rejects lock-suffixed feature branch', () => assert.throws(() => createTask({task_id:'x',base_branch:'feature/x.lock'}), /INVALID_TASK/));
 test('state machine follows guarded lifecycle', () => { const t=createTask({task_id:'x',base_branch:'feature/x'}); claim(t,'w',0,1000); transition(t,'RUNNING'); transition(t,'TESTING'); transition(t,'PR_OPEN'); transition(t,'DONE'); assert.equal(t.state,'DONE'); });
 test('invalid transition is rejected', () => { const t=createTask({task_id:'x',base_branch:'feature/x'}); assert.throws(() => transition(t,'DONE'), /INVALID_TRANSITION/); });
+test('duplicate claim is rejected', () => { const t=createTask({task_id:'x',base_branch:'feature/x'}); claim(t,'a',0,1000); assert.throws(()=>claim(t,'b',1,1000),/NOT_QUEUED/); });
 test('expired lease recovers to queue', () => { const t=createTask({task_id:'x',base_branch:'feature/x'}); claim(t,'w',0,1000); assert.equal(recoverExpiredLease(t,1001),true); assert.equal(t.state,'QUEUED'); });
+test('claim attempts are capped', () => { const t=createTask({task_id:'x',base_branch:'feature/x'}); for(let i=0;i<3;i++){ claim(t,'w',i*2000,1000); recoverExpiredLease(t,i*2000+1001); } assert.throws(()=>claim(t,'w',7000,1000),/MAX_ATTEMPTS_EXCEEDED/); });
 test('lease owner is enforced', () => { const t=createTask({task_id:'x',base_branch:'feature/x'}); claim(t,'worker-a',0,1000); assert.equal(assertLeaseOwner(t,'worker-a',1),true); assert.throws(()=>assertLeaseOwner(t,'worker-b',1),/LEASE_NOT_OWNED/); });
 test('expired lease cannot be used', () => { const t=createTask({task_id:'x',base_branch:'feature/x'}); claim(t,'worker-a',0,1000); assert.throws(()=>assertLeaseOwner(t,'worker-a',1000),/LEASE_EXPIRED/); });
 test('invalid lease TTL is rejected', () => { const t=createTask({task_id:'x',base_branch:'feature/x'}); assert.throws(()=>claim(t,'w',0,10),/INVALID_LEASE/); });
