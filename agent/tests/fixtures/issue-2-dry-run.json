@@ -1,0 +1,18 @@
+{
+  "task_id": "AIVAULT-002-DRYRUN",
+  "issuer": { "github_user_id": 305579832, "login": "NL13741619-commits" },
+  "repo": "NL13741619-commits/safe-reunion",
+  "base_branch": "feature/aivault-agent-dry-run",
+  "allowed_paths": ["agent/", "tests/agent/", "docs/agent-architecture.md", "contracts/agent-task.schema.json"],
+  "scope": "Validate safe automatic command intake in dry-run only. No product-code mutation or paid model call.",
+  "acceptance_tests": [
+    { "id": "AUTH-01", "kind": "unit", "expected": "trusted immutable issuer accepted" },
+    { "id": "REPLAY-01", "kind": "unit", "expected": "duplicate delivery rejected" },
+    { "id": "INJECT-01", "kind": "unit", "expected": "untrusted command cannot bypass policy" }
+  ],
+  "max_cost": { "currency": "USD", "amount": 0, "paid_api_allowed": false },
+  "approval": { "mode": "dry-run", "approved_by_owner": true, "approval_ref": "GitHub Issue #2 + user instruction 2026-10-22" },
+  "status": "queued",
+  "retry_limit": 1,
+  "timeout_seconds": 900
+}
