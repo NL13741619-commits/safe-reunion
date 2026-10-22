@@ -1,0 +1,468 @@
+openapi: 3.1.0
+info:
+  title: AIVAULT Second AI Base API
+  version: 0.1.2
+  description: Phase 1A contract only. Availability must reflect verified runtime state.
+  license:
+    name: Proprietary - contract specification only
+servers:
+  - url: https://{secondBaseHost}
+    variables:
+      secondBaseHost:
+        default: example.invalid
+paths:
+  /health:
+    get:
+      summary: Check API process health
+      operationId: getHealth
+      security: []
+      responses:
+        '200':
+          description: Process health only; not an engine-availability claim.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HealthResponse' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /v1/capabilities:
+    get:
+      summary: List verified capability states
+      operationId: getCapabilities
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Verified capability states.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CapabilitiesResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+  /v1/models:
+    get:
+      summary: List verified model states
+      operationId: getModels
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Verified model registry/status.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ModelsResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+  /v1/search:
+    post:
+      summary: Search through an approved real provider
+      operationId: search
+      x-required-scopes: [search:read]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SearchRequest' }
+      responses:
+        '200':
+          description: Real provider results only.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SearchResponse' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '429': { $ref: '#/components/responses/QuotaExceeded' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+        '504': { $ref: '#/components/responses/Timeout' }
+  /v1/knowledge/query:
+    post:
+      summary: Retrieve authorized knowledge evidence
+      operationId: queryKnowledge
+      x-required-scopes: [knowledge:read]
+      x-resource-authorization: Document grants must authorize every requested book_id for the authenticated tenant/sub.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/KnowledgeQueryRequest' }
+      responses:
+        '200':
+          description: Retrieval executed. evidence_status may be sufficient or insufficient; an empty/weak retrieval is not itself a protocol error.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/KnowledgeQueryResponse' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/KnowledgeNotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+        '504': { $ref: '#/components/responses/Timeout' }
+  /v1/reason:
+    post:
+      summary: Produce evidence-grounded reasoning
+      operationId: reason
+      x-required-scopes: [reason:execute, models:invoke]
+      x-conditional-scopes:
+        knowledge: knowledge:read is additionally required when knowledge is non-empty.
+        web_search: search:read is additionally required when execution.allow_web_search is true.
+      x-resource-authorization: Every referenced book_id requires a trusted document grant bound to tenant/sub; scopes never grant all documents.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReasonRequest' }
+      responses:
+        '200':
+          description: Evidence-grounded reasoning completed with sufficient evidence.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReasonResponse' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/InsufficientEvidence' }
+        '429': { $ref: '#/components/responses/QuotaExceeded' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ModelUnavailable' }
+        '504': { $ref: '#/components/responses/Timeout' }
+  /v1/chat/completions:
+    post:
+      summary: Produce a general model chat completion
+      operationId: chatCompletions
+      x-required-scopes: [models:invoke]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ChatRequest' }
+      responses:
+        '200':
+          description: General chat completion. This response does not claim evidence grounding.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChatResponse' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '429': { $ref: '#/components/responses/QuotaExceeded' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ModelUnavailable' }
+        '504': { $ref: '#/components/responses/Timeout' }
+  /v1/jobs:
+    post:
+      summary: Create an asynchronous job
+      operationId: createJob
+      x-required-scopes: [jobs:create]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/JobCreateRequest' }
+      responses:
+        '202':
+          description: Job accepted.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Job' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+  /v1/jobs/{id}:
+    get:
+      summary: Get asynchronous job status
+      operationId: getJob
+      x-required-scopes: [jobs:read]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, minLength: 1 }
+      responses:
+        '200':
+          description: Job status.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Job' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/JobNotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Short-lived JWT. Required claims are iss, aud, sub, exp, jti and scope. scope is a space-delimited OAuth-style string. Resource grants are separately verified from a trusted main-site authorization source and bound to tenant/sub.
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 8, maxLength: 255 }
+  schemas:
+    RequestId:
+      type: string
+      minLength: 1
+      description: UUID v7 preferred; preserve/map caller IDs when different.
+    HealthResponse:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status: { type: string, enum: [ok] }
+    CapabilityState: { type: string, enum: [available, degraded, unavailable, planned] }
+    Capability:
+      type: object
+      additionalProperties: false
+      required: [name, state]
+      properties:
+        name: { type: string }
+        state: { $ref: '#/components/schemas/CapabilityState' }
+        version: { type: [string, 'null'] }
+    CapabilitiesResponse:
+      type: object
+      required: [request_id, capabilities]
+      properties:
+        request_id: { $ref: '#/components/schemas/RequestId' }
+        capabilities: { type: array, items: { $ref: '#/components/schemas/Capability' } }
+    ModelStatus:
+      type: object
+      additionalProperties: false
+      required: [id, provider, state]
+      properties:
+        id: { type: string }
+        provider: { type: string }
+        state: { $ref: '#/components/schemas/CapabilityState' }
+        quota_remaining: { type: [number, 'null'], minimum: 0 }
+    ModelsResponse:
+      type: object
+      required: [request_id, models]
+      properties:
+        request_id: { $ref: '#/components/schemas/RequestId' }
+        models: { type: array, items: { $ref: '#/components/schemas/ModelStatus' } }
+    SearchRequest:
+      type: object
+      additionalProperties: false
+      required: [request_id, query]
+      properties:
+        request_id: { $ref: '#/components/schemas/RequestId' }
+        query: { type: string, minLength: 1, maxLength: 4000 }
+        language: { type: string, default: zh-TW }
+        max_results: { type: integer, minimum: 1, maximum: 20, default: 8 }
+    SearchResult:
+      type: object
+      additionalProperties: false
+      required: [url, title, retrieved_at]
+      properties:
+        url: { type: string, format: uri }
+        title: { type: string }
+        snippet: { type: [string, 'null'] }
+        provider: { type: [string, 'null'] }
+        retrieved_at: { type: string, format: date-time }
+    SearchResponse:
+      type: object
+      required: [request_id, status, results]
+      properties:
+        request_id: { $ref: '#/components/schemas/RequestId' }
+        status: { type: string, enum: [completed] }
+        results: { type: array, items: { $ref: '#/components/schemas/SearchResult' } }
+    KnowledgeRef:
+      type: object
+      additionalProperties: false
+      required: [book_id]
+      properties:
+        book_id: { type: string, minLength: 1 }
+        document_version: { type: [string, 'null'], pattern: '^sha256:[0-9A-Fa-f]{64}$' }
+    KnowledgeQueryRequest:
+      type: object
+      additionalProperties: false
+      required: [request_id, question, knowledge]
+      properties:
+        request_id: { $ref: '#/components/schemas/RequestId' }
+        question: { type: string, minLength: 1, maxLength: 16000 }
+        knowledge: { type: array, minItems: 1, items: { $ref: '#/components/schemas/KnowledgeRef' } }
+        max_results: { type: integer, minimum: 1, maximum: 20, default: 8 }
+    Citation:
+      type: object
+      additionalProperties: false
+      required: [source_id, document_version, chunk_id, source_text, score]
+      properties:
+        source_id: { type: string }
+        document_version: { type: string, pattern: '^sha256:[0-9A-Fa-f]{64}$' }
+        title: { type: [string, 'null'] }
+        chapter_id: { type: [string, 'null'] }
+        chapter_title: { type: [string, 'null'] }
+        page_label: { type: [string, 'null'] }
+        pdf_page_index: { type: [integer, 'null'], minimum: 0 }
+        epub_locator: { type: [string, 'null'] }
+        chunk_id: { type: string }
+        source_text: { type: string }
+        score: { type: number }
+    KnowledgeQueryResponse:
+      type: object
+      required: [request_id, status, citations, evidence_status]
+      properties:
+        request_id: { $ref: '#/components/schemas/RequestId' }
+        status: { type: string, enum: [completed] }
+        citations: { type: array, items: { $ref: '#/components/schemas/Citation' } }
+        evidence_status: { type: string, enum: [sufficient, insufficient] }
+    ExecutionOptions:
+      type: object
+      additionalProperties: false
+      properties:
+        mode: { type: string, enum: [evidence_grounded], default: evidence_grounded }
+        model: { type: string, default: auto }
+        allow_web_search: { type: boolean, default: false }
+        allow_paid_api: { type: boolean, default: false }
+    ReasonRequest:
+      type: object
+      additionalProperties: false
+      required: [request_id, task, input]
+      properties:
+        request_id: { $ref: '#/components/schemas/RequestId' }
+        task: { type: string, enum: [legal_reasoning, general_reasoning] }
+        input:
+          type: object
+          additionalProperties: false
+          required: [question]
+          properties:
+            question: { type: string, minLength: 1, maxLength: 16000 }
+            language: { type: string, default: zh-TW }
+        knowledge: { type: array, items: { $ref: '#/components/schemas/KnowledgeRef' } }
+        execution: { $ref: '#/components/schemas/ExecutionOptions' }
+    Usage:
+      type: object
+      additionalProperties: false
+      properties:
+        input_tokens: { type: [integer, 'null'], minimum: 0 }
+        output_tokens: { type: [integer, 'null'], minimum: 0 }
+    ReasonResponse:
+      type: object
+      additionalProperties: false
+      required: [request_id, status, answer, citations, evidence_status, engine, model, provider, usage, error]
+      properties:
+        request_id: { $ref: '#/components/schemas/RequestId' }
+        status: { type: string, enum: [completed] }
+        answer: { type: string }
+        citations: { type: array, minItems: 1, items: { $ref: '#/components/schemas/Citation' } }
+        evidence_status: { type: string, enum: [sufficient] }
+        engine: { type: string }
+        model: { type: string }
+        provider: { type: string }
+        usage: { $ref: '#/components/schemas/Usage' }
+        error: { type: 'null' }
+    ChatRequest:
+      type: object
+      additionalProperties: false
+      required: [request_id, messages]
+      properties:
+        request_id: { $ref: '#/components/schemas/RequestId' }
+        model: { type: string, default: auto }
+        messages:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            additionalProperties: false
+            required: [role, content]
+            properties:
+              role: { type: string, enum: [system, user, assistant] }
+              content: { type: string }
+    ChatResponse:
+      type: object
+      additionalProperties: false
+      required: [request_id, status, output, engine, model, provider, usage, error]
+      properties:
+        request_id: { $ref: '#/components/schemas/RequestId' }
+        status: { type: string, enum: [completed] }
+        output: { type: string }
+        engine: { type: string }
+        model: { type: string }
+        provider: { type: string }
+        usage: { $ref: '#/components/schemas/Usage' }
+        error: { type: 'null' }
+    JobCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [request_id, type, payload]
+      properties:
+        request_id: { $ref: '#/components/schemas/RequestId' }
+        type: { type: string, enum: [knowledge_index, future_media] }
+        payload: { type: object }
+    Job:
+      type: object
+      required: [id, request_id, status]
+      properties:
+        id: { type: string }
+        request_id: { $ref: '#/components/schemas/RequestId' }
+        status: { type: string, enum: [queued, running, completed, failed, cancelled] }
+    ErrorDetail:
+      type: object
+      additionalProperties: false
+      required: [code, message, retryable, retry_after_seconds]
+      properties:
+        code:
+          type: string
+          enum: [UNAUTHORIZED, FORBIDDEN, INVALID_REQUEST, KNOWLEDGE_NOT_FOUND, JOB_NOT_FOUND, INSUFFICIENT_EVIDENCE, MODEL_UNAVAILABLE, PROVIDER_QUOTA_EXCEEDED, TIMEOUT, INTERNAL_ERROR]
+        message: { type: string }
+        retryable: { type: boolean }
+        retry_after_seconds: { type: [integer, 'null'], minimum: 0 }
+        provider: { type: [string, 'null'] }
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [request_id, status, error]
+      properties:
+        request_id: { $ref: '#/components/schemas/RequestId' }
+        status: { type: string, enum: [error] }
+        error: { $ref: '#/components/schemas/ErrorDetail' }
+  responses:
+    InvalidRequest:
+      description: Invalid request.
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } }
+    Unauthorized:
+      description: Missing or invalid authentication.
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } }
+    Forbidden:
+      description: Scope or resource authorization denied.
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } }
+    KnowledgeNotFound:
+      description: Authorized knowledge resource does not exist.
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } }
+    JobNotFound:
+      description: Requested job does not exist or is not visible to the caller.
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } }
+    InsufficientEvidence:
+      description: Reasoning refused because retrieved/allowed evidence is insufficient.
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } }
+    ModelUnavailable:
+      description: Requested/eligible model is unavailable.
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } }
+    QuotaExceeded:
+      description: Provider quota exceeded. Retry-After should be emitted when known.
+      headers:
+        Retry-After:
+          schema: { type: integer, minimum: 0 }
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } }
+    Timeout:
+      description: Upstream or execution timeout.
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } }
+    InternalError:
+      description: Internal error.
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } }
+    ServiceUnavailable:
+      description: Required service is unavailable.
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } }
