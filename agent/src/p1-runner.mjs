@@ -59,8 +59,8 @@ export function modelGate(env = process.env) {
   return { ok: true, provider: env.AIVAULT_MODEL_PROVIDER, model: env.AIVAULT_MODEL_NAME };
 }
 
-export function buildModelRequest(task, instruction) {
-  const gate = modelGate();
+export function buildModelRequest(task, instruction, env = process.env) {
+  const gate = modelGate(env);
   if (!gate.ok) return gate;
   return { ok: true, provider: gate.provider, model: gate.model, task_id: task.task_id, instruction: String(instruction).slice(0,4000), mutation_scope: 'agent/', direct_main_push: false, auto_merge: false };
 }
