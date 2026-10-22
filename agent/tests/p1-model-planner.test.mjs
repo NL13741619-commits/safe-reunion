@@ -3,12 +3,18 @@ import assert from 'node:assert/strict';
 import { ModelAdapter, mockZeroCostTransport } from '../src/p1-model-adapter.mjs';
 import { parseEditPlan, summarizePlan } from '../src/p1-planner.mjs';
 
-const env = { AIVAULT_MODEL_PROVIDER:'mock', AIVAULT_MODEL_NAME:'contract-test', AIVAULT_MODEL_TOKEN:'test-only' };
+const env = { AIVAULT_MODEL_PROVIDER:'mock', AIVAULT_MODEL_NAME:'contract-test', AIVAULT_MOCK_CONTRACT:'1' };
 const task = { task_id:'P1-test' };
 
-test('adapter is BLOCKED_NO_MODEL without credential', async () => {
+test('adapter is BLOCKED_NO_MODEL without configuration', async () => {
   const r = await new ModelAdapter({env:{},transport:mockZeroCostTransport()}).generate({task,instruction:'x'});
   assert.equal(r.code,'BLOCKED_NO_MODEL'); assert.equal(r.called,false);
+});
+test('mock provider requires explicit test-only switch', async () => {
+  const r = await new ModelAdapter({env:{AIVAULT_MODEL_PROVIDER:'mock',AIVAULT_MODEL_NAME:'x'},transport:mockZeroCostTransport()}).generate({task,instruction:'x'}); assert.equal(r.code,'BLOCKED_MOCK_NOT_ENABLED');
+});
+test('unknown real provider is blocked even with token', async () => {
+  const r = await new ModelAdapter({env:{AIVAULT_MODEL_PROVIDER:'unknown',AIVAULT_MODEL_NAME:'x',AIVAULT_MODEL_TOKEN:'secret'},transport:mockZeroCostTransport()}).generate({task,instruction:'x'}); assert.equal(r.code,'BLOCKED_PROVIDER_NOT_AUTHORIZED');
 });
 test('adapter blocks when transport is absent', async () => {
   const r = await new ModelAdapter({env}).generate({task,instruction:'x'}); assert.equal(r.code,'BLOCKED_NO_TRANSPORT');
