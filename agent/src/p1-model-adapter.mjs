@@ -10,6 +10,7 @@ export class ModelAdapter {
     const gate = modelGate(this.env);
     if (!gate.ok) return { ...gate, called: false, cost_usd: 0 };
     if (typeof this.transport !== 'function') return { ok: false, code: 'BLOCKED_NO_TRANSPORT', called: false, cost_usd: 0 };
+    if (gate.mock === true && this.transport.aivaultMockTransport !== true) return { ok: false, code: 'BLOCKED_UNTRUSTED_MOCK_TRANSPORT', called: false, cost_usd: 0 };
 
     const request = {
       provider: gate.provider,
@@ -26,5 +27,7 @@ export class ModelAdapter {
 }
 
 export function mockZeroCostTransport(output = 'NOOP') {
-  return async () => ({ output, cost_usd: 0 });
+  const transport = async () => ({ output, cost_usd: 0 });
+  transport.aivaultMockTransport = true;
+  return transport;
 }
