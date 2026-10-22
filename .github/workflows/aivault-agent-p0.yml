@@ -1,0 +1,47 @@
+name: AIVAULT P0 Agent Intake
+
+on:
+  issues:
+    types: [opened, edited, reopened]
+  issue_comment:
+    types: [created, edited]
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: aivault-p0-${{ github.event.issue.number || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  dry-run-intake:
+    if: >-
+      github.repository == 'NL13741619-commits/safe-reunion' &&
+      github.event.issue.number == 2 &&
+      (github.event.sender.id == 306819786 || github.event.sender.id == 305579832)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      AIVAULT_TRUSTED_ACTOR_IDS: '306819786,305579832'
+      AIVAULT_ALLOWED_ISSUE: '2'
+    steps:
+      - name: Checkout trusted default-branch code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+
+      - name: Run P0 security tests
+        working-directory: agent
+        run: node --test tests/*.test.mjs
+
+      - name: Process authorized Issue #2 command
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        working-directory: agent
+        run: node src/action.mjs
