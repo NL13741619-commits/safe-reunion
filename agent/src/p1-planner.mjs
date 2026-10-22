@@ -13,11 +13,11 @@ export function parseEditPlan(text) {
       if (seen.has(path)) throw new Error('DUPLICATE_EDIT_TARGET');
       seen.add(path);
       const content = String(edit.content ?? '');
-      if (content.length > 50_000) throw new Error('CONTENT_TOO_LARGE');
+      if (Buffer.byteLength(content, 'utf8') > 50_000) throw new Error('CONTENT_TOO_LARGE');
       edits.push({ op: 'replace_file', path, content });
     }
   } catch (error) { return { ok: false, code: error.message || 'PLAN_DENIED' }; }
-  return { ok: true, edits, test_command: { file: 'node', args: ['--test', 'agent/tests/*.test.mjs'], shell: false }, draft_pr_only: true, direct_main_push: false, auto_merge: false };
+  return { ok: true, edits, test_command: { file: 'node', args: ['--test', 'agent/tests'], shell: false }, draft_pr_only: true, direct_main_push: false, auto_merge: false };
 }
 
 export function summarizePlan(plan) {
