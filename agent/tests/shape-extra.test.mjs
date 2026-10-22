@@ -1,0 +1,1 @@
+import test from'node:test';import assert from'node:assert/strict';import{validateTaskShape}from'../src/schema.mjs';test('array is not accepted as task object',()=>assert.equal(validateTaskShape([]).ok,false));

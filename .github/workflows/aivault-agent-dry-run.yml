@@ -1,0 +1,51 @@
+name: AIVAULT Agent Dry Run
+
+on:
+  issues:
+    types: [opened, edited, reopened]
+  issue_comment:
+    types: [created, edited]
+  pull_request:
+    branches: [feature/aivault-core-phase1]
+    paths:
+      - 'agent/**'
+      - '.github/workflows/aivault-agent-dry-run.yml'
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: aivault-agent-${{ github.event.issue.number || github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  validate-and-dry-run:
+    if: >-
+      github.repository == 'NL13741619-commits/safe-reunion' &&
+      (github.actor_id == 306819786 || github.actor_id == 305579832)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      AIVAULT_TRUSTED_ACTOR_IDS: '306819786,305579832'
+    steps:
+      - name: Checkout fixed repository code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Run agent unit tests
+        working-directory: agent
+        run: node --test tests/*.test.mjs
+
+      - name: Process trusted GitHub event in dry-run mode
+        if: github.event_name == 'issues' || github.event_name == 'issue_comment'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        working-directory: agent
+        run: node src/action.mjs

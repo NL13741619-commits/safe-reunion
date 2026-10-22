@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aivault.invalid/contracts/agent-task.schema.json",
+  "title": "AIVAULT Second-Base Agent Task",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "task_id",
+    "issuer",
+    "repo",
+    "base_branch",
+    "allowed_paths",
+    "acceptance_tests",
+    "max_cost",
+    "approval",
+    "status"
+  ],
+  "properties": {
+    "task_id": {
+      "type": "string",
+      "pattern": "^AIVAULT-[A-Z0-9][A-Z0-9._-]{1,63}$"
+    },
+    "issuer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["github_user_id", "login"],
+      "properties": {
+        "github_user_id": { "type": "integer", "minimum": 1 },
+        "login": { "type": "string", "minLength": 1, "maxLength": 100 }
+      }
+    },
+    "repo": {
+      "type": "string",
+      "const": "NL13741619-commits/safe-reunion"
+    },
+    "base_branch": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255
+    },
+    "allowed_paths": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 50,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 255,
+        "not": { "pattern": "(^|/)\\.\\.(/|$)|^/|^\\.github/workflows/|(^|/)(secrets?|\\.env)(/|$)" }
+      }
+    },
+    "scope": {
+      "type": "string",
+      "maxLength": 8000
+    },
+    "acceptance_tests": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 50,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "kind", "expected"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[A-Za-z0-9._-]{1,64}$" },
+          "kind": { "type": "string", "enum": ["contract", "unit", "integration", "lint", "manual"] },
+          "expected": { "type": "string", "minLength": 1, "maxLength": 2000 }
+        }
+      }
+    },
+    "max_cost": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["currency", "amount", "paid_api_allowed"],
+      "properties": {
+        "currency": { "type": "string", "enum": ["USD", "TWD"] },
+        "amount": { "type": "number", "minimum": 0 },
+        "paid_api_allowed": { "type": "boolean" }
+      }
+    },
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "approved_by_owner"],
+      "properties": {
+        "mode": { "type": "string", "enum": ["dry-run", "execute"] },
+        "approved_by_owner": { "type": "boolean" },
+        "approval_ref": { "type": ["string", "null"], "maxLength": 500 }
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": ["queued", "accepted", "running", "blocked", "pr_open", "review_requested", "done", "failed"]
+    },
+    "retry_limit": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 3,
+      "default": 1
+    },
+    "timeout_seconds": {
+      "type": "integer",
+      "minimum": 30,
+      "maximum": 3600,
+      "default": 900
+    }
+  }
+}
