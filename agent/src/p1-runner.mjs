@@ -13,7 +13,7 @@ export function transition(task, next, detail = '') {
   if (!STATES.has(next)) throw new Error('INVALID_STATE');
   const allowed = {
     QUEUED: ['CLAIMED','BLOCKED'], CLAIMED: ['RUNNING','QUEUED','BLOCKED'], RUNNING: ['TESTING','BLOCKED','FAILED'],
-    TESTING: ['PR_OPEN','FAILED','BLOCKED'], PR_OPEN: ['DONE','FAILED'], BLOCKED: [], FAILED: ['QUEUED'], DONE: []
+    TESTING: ['PR_OPEN','FAILED','BLOCKED'], PR_OPEN: ['DONE','FAILED'], BLOCKED: [], FAILED: ['QUEUED','BLOCKED'], DONE: []
   };
   if (!allowed[task.state]?.includes(next)) throw new Error('INVALID_TRANSITION');
   task.audit.push({ from: task.state, to: next, detail: String(detail).slice(0,200) });
