@@ -50,7 +50,7 @@ export function assertWorkspacePath(path) {
   const value = String(path || '').replaceAll('\\','/');
   const segments = value.split('/');
   if (!value || value.startsWith('/') || value.includes('\0') || value.includes('//') || segments.includes('.') || segments.includes('..') || value.startsWith('.git/') || value.startsWith('.github/workflows/')) throw new Error('PATH_DENIED');
-  if (!value.startsWith('agent/') || value === 'agent/') throw new Error('PATH_OUTSIDE_WORKSPACE');
+  if (!(value.startsWith('agent/src/') || value.startsWith('agent/tests/'))) throw new Error('PATH_OUTSIDE_WORKSPACE');
   return value;
 }
 
@@ -70,5 +70,5 @@ export function modelGate(env = process.env) {
 export function buildModelRequest(task, instruction, env = process.env) {
   const gate = modelGate(env);
   if (!gate.ok) return gate;
-  return { ok: true, provider: gate.provider, model: gate.model, task_id: task.task_id, instruction: String(instruction).slice(0,4000), mutation_scope: 'agent/', direct_main_push: false, auto_merge: false, mock: gate.mock === true };
+  return { ok: true, provider: gate.provider, model: gate.model, task_id: task.task_id, instruction: String(instruction).slice(0,4000), mutation_scope: 'agent/src + agent/tests', direct_main_push: false, auto_merge: false, mock: gate.mock === true };
 }
