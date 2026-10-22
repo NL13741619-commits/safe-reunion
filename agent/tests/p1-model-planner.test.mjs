@@ -23,15 +23,18 @@ test('unknown real provider is blocked even with token', async () => {
 test('adapter blocks when transport is absent', async () => {
   const r = await new ModelAdapter({env}).generate({task,instruction:'x'}); assert.equal(r.code,'BLOCKED_NO_TRANSPORT');
 });
+test('mock mode rejects arbitrary transport function', async () => {
+  const r=await new ModelAdapter({env,transport:async()=>({output:'x',cost_usd:0})}).generate({task,instruction:'x'}); assert.equal(r.code,'BLOCKED_UNTRUSTED_MOCK_TRANSPORT'); assert.equal(r.called,false);
+});
 test('mock zero-cost model contract succeeds', async () => {
   const r = await new ModelAdapter({env,transport:mockZeroCostTransport('{"edits":[]}')}).generate({task,instruction:'x'});
   assert.equal(r.ok,true); assert.equal(r.cost_usd,0);
 });
 test('nonzero model cost is rejected', async () => {
-  const transport=async()=>({output:'x',cost_usd:0.01}); const r=await new ModelAdapter({env,transport}).generate({task,instruction:'x'}); assert.equal(r.code,'MODEL_NONZERO_COST');
+  const transport=mockZeroCostTransport('x'); transport.aivaultMockTransport=true; const original=transport; const costly=async req=>({...(await original(req)),cost_usd:0.01}); costly.aivaultMockTransport=true; const r=await new ModelAdapter({env,transport:costly}).generate({task,instruction:'x'}); assert.equal(r.code,'MODEL_NONZERO_COST');
 });
 test('bad model response is rejected', async () => {
-  const r=await new ModelAdapter({env,transport:async()=>({})}).generate({task,instruction:'x'}); assert.equal(r.code,'MODEL_BAD_RESPONSE');
+  const transport=async()=>({}); transport.aivaultMockTransport=true; const r=await new ModelAdapter({env,transport}).generate({task,instruction:'x'}); assert.equal(r.code,'MODEL_BAD_RESPONSE');
 });
 test('planner accepts one agent replace_file edit', () => {
   const p=parseEditPlan(JSON.stringify({edits:[{op:'replace_file',path:'agent/src/example.mjs',content:'export const x=1;'}]})); assert.equal(p.ok,true); assert.equal(summarizePlan(p).status,'READY_FOR_SANDBOX');
