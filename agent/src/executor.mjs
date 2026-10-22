@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 
 const ALLOWED = new Map([
-  ['agent-unit', { cmd: process.execPath, args: ['--test', 'tests/*.test.mjs'] }]
+  ['agent-unit', { cmd: process.execPath, args: ['--test', 'tests'] }]
 ]);
 
 export function getAllowedTest(id) { return ALLOWED.get(id) ?? null; }
@@ -9,7 +9,6 @@ export function getAllowedTest(id) { return ALLOWED.get(id) ?? null; }
 export async function runAllowedTest(id, { cwd, timeoutMs = 120000 } = {}) {
   const spec = getAllowedTest(id);
   if (!spec) return { ok:false, reason:'TEST_NOT_ALLOWLISTED' };
-  // Do not invoke a shell: arguments are fixed by trusted code, never by Issue text.
   return await new Promise(resolve => {
     const child=spawn(spec.cmd,spec.args,{cwd,shell:false,stdio:['ignore','pipe','pipe']});
     let stdout='',stderr='';
