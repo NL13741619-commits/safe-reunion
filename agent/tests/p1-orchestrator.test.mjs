@@ -9,7 +9,7 @@ const env={AIVAULT_KILL_SWITCH:'0',AIVAULT_ALLOW_PAID:'0',AIVAULT_MODEL_PROVIDER
 test('mock E2E reaches TESTING with zero mutation', async()=>{
   const output=JSON.stringify({edits:[{op:'replace_file',path:'agent/src/example.mjs',content:'export const ok=true;'}]});
   const r=await runP1MockE2E({input,instruction:'make safe change',env,transport:mockZeroCostTransport(output)});
-  assert.equal(r.ok,true); assert.equal(r.task.state,'TESTING'); assert.equal(r.model_cost_usd,0); assert.equal(r.mutation_performed,false); assert.equal(r.draft_pr_created,false); assert.deepEqual(r.plan.files,['agent/src/example.mjs']);
+  assert.equal(r.ok,true); assert.equal(r.task.state,'TESTING'); assert.equal(r.model_cost_usd,0); assert.equal(r.mutation_performed,false); assert.equal(r.tests_executed,false); assert.equal(r.draft_pr_created,false); assert.deepEqual(r.plan.files,['agent/src/example.mjs']);
 });
 test('unset kill switch fails closed before model configuration', async()=>{
   const r=await runP1MockE2E({input,instruction:'x',env:{},transport:mockZeroCostTransport('x')});
@@ -26,5 +26,5 @@ test('safety-enabled runner without model reports BLOCKED_NO_MODEL', async()=>{
 test('malicious model plan is blocked without mutation', async()=>{
   const output=JSON.stringify({edits:[{op:'replace_file',path:'index.html',content:'bad'}]});
   const r=await runP1MockE2E({input,instruction:'x',env,transport:mockZeroCostTransport(output)});
-  assert.equal(r.ok,false); assert.equal(r.task.state,'BLOCKED'); assert.equal(r.mutation_performed,false); assert.equal(r.draft_pr_created,false);
+  assert.equal(r.ok,false); assert.equal(r.task.state,'BLOCKED'); assert.equal(r.mutation_performed,false); assert.equal(r.tests_executed,false); assert.equal(r.draft_pr_created,false);
 });
