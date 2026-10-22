@@ -55,8 +55,8 @@ export function assertWorkspacePath(path) {
 
 export function modelGate(env = process.env) {
   if (env.AIVAULT_KILL_SWITCH !== '0') return { ok: false, code: 'BLOCKED_KILL_SWITCH' };
+  if (env.AIVAULT_ALLOW_PAID !== '0') return { ok: false, code: 'BLOCKED_PAID_POLICY_UNSET' };
   if (!env.AIVAULT_MODEL_PROVIDER || !env.AIVAULT_MODEL_NAME) return { ok: false, code: 'BLOCKED_NO_MODEL' };
-  if (env.AIVAULT_ALLOW_PAID === '1') return { ok: false, code: 'BLOCKED_PAID_MODEL' };
   if (env.AIVAULT_MODEL_PROVIDER === 'mock') {
     if (env.AIVAULT_MOCK_CONTRACT !== '1') return { ok: false, code: 'BLOCKED_MOCK_NOT_ENABLED' };
     return { ok: true, provider: 'mock', model: env.AIVAULT_MODEL_NAME, mock: true };
