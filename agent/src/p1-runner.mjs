@@ -1,4 +1,5 @@
 const STATES = new Set(['QUEUED','CLAIMED','RUNNING','TESTING','PR_OPEN','BLOCKED','FAILED','DONE']);
+const MAX_ATTEMPTS = 3;
 
 function validFeatureBranch(branch) {
   return typeof branch === 'string' && /^feature\/[A-Za-z0-9][A-Za-z0-9._/-]*$/.test(branch) && !branch.includes('..') && !branch.includes('//') && !branch.endsWith('/') && !branch.endsWith('.') && !branch.endsWith('.lock') && !branch.includes('@{');
@@ -24,6 +25,7 @@ export function transition(task, next, detail = '') {
 
 export function claim(task, workerId, now = Date.now(), ttlMs = 60_000) {
   if (task.state !== 'QUEUED') throw new Error('NOT_QUEUED');
+  if (task.attempts >= MAX_ATTEMPTS) throw new Error('MAX_ATTEMPTS_EXCEEDED');
   if (!workerId || !Number.isFinite(ttlMs) || ttlMs < 1000 || ttlMs > 300000) throw new Error('INVALID_LEASE');
   transition(task, 'CLAIMED', 'lease acquired');
   task.lease = { worker_id: String(workerId).slice(0,100), expires_at: now + ttlMs };
