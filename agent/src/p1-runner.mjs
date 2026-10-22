@@ -1,7 +1,11 @@
 const STATES = new Set(['QUEUED','CLAIMED','RUNNING','TESTING','PR_OPEN','BLOCKED','FAILED','DONE']);
 
+function validFeatureBranch(branch) {
+  return typeof branch === 'string' && /^feature\/[A-Za-z0-9._/-]+$/.test(branch) && !branch.includes('..') && !branch.endsWith('/') && branch !== 'feature/main';
+}
+
 export function createTask(input) {
-  if (!input?.task_id || !input?.base_branch?.startsWith('feature/')) throw new Error('INVALID_TASK');
+  if (!input?.task_id || !validFeatureBranch(input?.base_branch)) throw new Error('INVALID_TASK');
   return { task_id: input.task_id, base_branch: input.base_branch, state: 'QUEUED', lease: null, attempts: 0, audit: [] };
 }
 
@@ -19,10 +23,17 @@ export function transition(task, next, detail = '') {
 
 export function claim(task, workerId, now = Date.now(), ttlMs = 60_000) {
   if (task.state !== 'QUEUED') throw new Error('NOT_QUEUED');
+  if (!workerId || !Number.isFinite(ttlMs) || ttlMs < 1000 || ttlMs > 300000) throw new Error('INVALID_LEASE');
   transition(task, 'CLAIMED', 'lease acquired');
-  task.lease = { worker_id: workerId, expires_at: now + ttlMs };
+  task.lease = { worker_id: String(workerId).slice(0,100), expires_at: now + ttlMs };
   task.attempts += 1;
   return task;
+}
+
+export function assertLeaseOwner(task, workerId, now = Date.now()) {
+  if (!task?.lease || task.lease.worker_id !== workerId) throw new Error('LEASE_NOT_OWNED');
+  if (task.lease.expires_at <= now) throw new Error('LEASE_EXPIRED');
+  return true;
 }
 
 export function recoverExpiredLease(task, now = Date.now()) {
