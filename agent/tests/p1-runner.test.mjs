@@ -1,11 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createTask, transition, claim, recoverExpiredLease, assertWorkspacePath, modelGate } from '../src/p1-runner.mjs';
+import { createTask, transition, claim, recoverExpiredLease, assertLeaseOwner, assertWorkspacePath, modelGate } from '../src/p1-runner.mjs';
 
 test('task requires feature branch', () => assert.throws(() => createTask({task_id:'x',base_branch:'main'}), /INVALID_TASK/));
-test('state machine follows guarded lifecycle', () => { const t=createTask({task_id:'x',base_branch:'feature/x'}); claim(t,'w',0,100); transition(t,'RUNNING'); transition(t,'TESTING'); transition(t,'PR_OPEN'); transition(t,'DONE'); assert.equal(t.state,'DONE'); });
+test('task rejects traversal-like feature branch', () => assert.throws(() => createTask({task_id:'x',base_branch:'feature/../main'}), /INVALID_TASK/));
+test('state machine follows guarded lifecycle', () => { const t=createTask({task_id:'x',base_branch:'feature/x'}); claim(t,'w',0,1000); transition(t,'RUNNING'); transition(t,'TESTING'); transition(t,'PR_OPEN'); transition(t,'DONE'); assert.equal(t.state,'DONE'); });
 test('invalid transition is rejected', () => { const t=createTask({task_id:'x',base_branch:'feature/x'}); assert.throws(() => transition(t,'DONE'), /INVALID_TRANSITION/); });
-test('expired lease recovers to queue', () => { const t=createTask({task_id:'x',base_branch:'feature/x'}); claim(t,'w',0,10); assert.equal(recoverExpiredLease(t,11),true); assert.equal(t.state,'QUEUED'); });
+test('expired lease recovers to queue', () => { const t=createTask({task_id:'x',base_branch:'feature/x'}); claim(t,'w',0,1000); assert.equal(recoverExpiredLease(t,1001),true); assert.equal(t.state,'QUEUED'); });
+test('lease owner is enforced', () => { const t=createTask({task_id:'x',base_branch:'feature/x'}); claim(t,'worker-a',0,1000); assert.equal(assertLeaseOwner(t,'worker-a',1),true); assert.throws(()=>assertLeaseOwner(t,'worker-b',1),/LEASE_NOT_OWNED/); });
+test('expired lease cannot be used', () => { const t=createTask({task_id:'x',base_branch:'feature/x'}); claim(t,'worker-a',0,1000); assert.throws(()=>assertLeaseOwner(t,'worker-a',1000),/LEASE_EXPIRED/); });
+test('invalid lease TTL is rejected', () => { const t=createTask({task_id:'x',base_branch:'feature/x'}); assert.throws(()=>claim(t,'w',0,10),/INVALID_LEASE/); });
 test('workspace accepts agent paths only', () => assert.equal(assertWorkspacePath('agent/src/x.mjs'),'agent/src/x.mjs'));
 test('workspace rejects traversal', () => assert.throws(() => assertWorkspacePath('agent/../index.html'), /PATH_DENIED/));
 test('workspace rejects product root', () => assert.throws(() => assertWorkspacePath('index.html'), /PATH_OUTSIDE_WORKSPACE/));
