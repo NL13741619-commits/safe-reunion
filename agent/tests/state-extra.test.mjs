@@ -1,0 +1,1 @@
+import test from'node:test';import assert from'node:assert/strict';import{TaskState}from'../src/state.mjs';test('terminal done state rejects further transition',()=>{const s=new TaskState('x');s.transition('accepted').transition('running').transition('done');assert.throws(()=>s.transition('running'));});
