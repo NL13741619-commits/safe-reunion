@@ -6,10 +6,10 @@ import { mockZeroCostTransport } from '../src/p1-model-adapter.mjs';
 const input={task_id:'P1-E2E',base_branch:'feature/p1-e2e'};
 const env={AIVAULT_KILL_SWITCH:'0',AIVAULT_ALLOW_PAID:'0',AIVAULT_MODEL_PROVIDER:'mock',AIVAULT_MODEL_NAME:'contract-test',AIVAULT_MOCK_CONTRACT:'1'};
 
-test('mock E2E reaches TESTING with zero mutation', async()=>{
+test('mock E2E applies plan only inside disposable sandbox', async()=>{
   const output=JSON.stringify({edits:[{op:'replace_file',path:'agent/src/example.mjs',content:'export const ok=true;'}]});
   const r=await runP1MockE2E({input,instruction:'make safe change',env,transport:mockZeroCostTransport(output)});
-  assert.equal(r.ok,true); assert.equal(r.task.state,'TESTING'); assert.equal(r.model_cost_usd,0); assert.equal(r.mutation_performed,false); assert.equal(r.tests_executed,false); assert.equal(r.draft_pr_created,false); assert.deepEqual(r.plan.files,['agent/src/example.mjs']);
+  assert.equal(r.ok,true); assert.equal(r.code,'MOCK_SANDBOX_APPLIED'); assert.equal(r.task.state,'TESTING'); assert.equal(r.model_cost_usd,0); assert.equal(r.mutation_performed,true); assert.equal(r.mutation_scope,'disposable_temp_workspace_only'); assert.equal(r.production_mutation,false); assert.deepEqual(r.written_files,['agent/src/example.mjs']); assert.equal(r.tests_executed,false); assert.equal(r.draft_pr_created,false); assert.deepEqual(r.plan.files,['agent/src/example.mjs']);
 });
 test('unset kill switch fails closed before model configuration', async()=>{
   const r=await runP1MockE2E({input,instruction:'x',env:{},transport:mockZeroCostTransport('x')});
