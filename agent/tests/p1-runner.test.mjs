@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { createTask, transition, claim, recoverExpiredLease, assertLeaseOwner, assertWorkspacePath, modelGate, buildModelRequest } from '../src/p1-runner.mjs';
 
 test('task requires feature branch', () => assert.throws(() => createTask({task_id:'x',base_branch:'main'}), /INVALID_TASK/));
+test('task rejects unsafe task id', () => assert.throws(() => createTask({task_id:'x\nmalicious',base_branch:'feature/x'}), /INVALID_TASK/));
+test('task rejects overlong task id', () => assert.throws(() => createTask({task_id:'x'.repeat(121),base_branch:'feature/x'}), /INVALID_TASK/));
 test('task rejects traversal-like feature branch', () => assert.throws(() => createTask({task_id:'x',base_branch:'feature/../main'}), /INVALID_TASK/));
 test('task rejects ambiguous feature branch', () => assert.throws(() => createTask({task_id:'x',base_branch:'feature/x//y'}), /INVALID_TASK/));
 test('task rejects lock-suffixed feature branch', () => assert.throws(() => createTask({task_id:'x',base_branch:'feature/x.lock'}), /INVALID_TASK/));
