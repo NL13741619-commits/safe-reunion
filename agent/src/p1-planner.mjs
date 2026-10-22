@@ -17,10 +17,10 @@ export function parseEditPlan(text) {
       edits.push({ op: 'replace_file', path, content });
     }
   } catch (error) { return { ok: false, code: error.message || 'PLAN_DENIED' }; }
-  return { ok: true, edits, tests: ['node --test tests/*.test.mjs'], draft_pr_only: true, direct_main_push: false, auto_merge: false };
+  return { ok: true, edits, test_command: { file: 'node', args: ['--test', 'agent/tests/*.test.mjs'], shell: false }, draft_pr_only: true, direct_main_push: false, auto_merge: false };
 }
 
 export function summarizePlan(plan) {
   if (!plan?.ok) return { status: 'BLOCKED', reason: plan?.code || 'INVALID_PLAN' };
-  return { status: 'READY_FOR_SANDBOX', files: plan.edits.map(e => e.path), tests: plan.tests, mutation_scope: 'agent/src + agent/tests', draft_pr_only: true };
+  return { status: 'READY_FOR_SANDBOX', files: plan.edits.map(e => e.path), test_command: plan.test_command, mutation_scope: 'agent/src + agent/tests', draft_pr_only: true };
 }
