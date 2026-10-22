@@ -22,4 +22,4 @@ jobs:
         with:
           node-version: '22'
       - name: Run P1 tests
-        run: node --test agent/tests/*.test.mjs
+        run: node --test agent/tests
