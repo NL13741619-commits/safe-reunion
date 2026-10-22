@@ -1,100 +1,69 @@
 # API Contract — Phase 1A
 
-Canonical machine-readable contract: `contracts/openapi.yaml`.
+Canonical machine-readable contract: `contracts/openapi.yaml` (OpenAPI 3.1).
 
-## Transport
+## Transport and identity
+Protected requests use HTTPS + JSON and `Authorization: Bearer <short-lived JWT>`. Required JWT claims are `iss`, `aud`, `sub`, `exp`, `jti`, `scope`. `scope` is a space-delimited OAuth-style string. UUID v7 is preferred for request IDs; caller IDs are preserved/mapped when different.
 
-Production/staging calls use HTTPS and JSON. Base path is `/v1` except `GET /health`.
+## Authorization model
+Scopes authorize operations; they never authorize every document. Trusted resource grants are supplied/verified from the AIVAULT main-site authorization source and bound to tenant + subject. A missing/invalid token is 401. A valid identity missing a required scope or document grant is 403.
 
-Required protected-request headers:
+Endpoint rules:
+- `/v1/search`: `search:read`.
+- `/v1/knowledge/query`: `knowledge:read` plus grants for every requested `book_id`.
+- `/v1/reason`: always `reason:execute` + `models:invoke`; additionally `knowledge:read` when `knowledge[]` is used and `search:read` when `allow_web_search=true`; referenced books require document grants.
+- `/v1/chat/completions`: `models:invoke`; this is general chat, not evidence-grounded legal reasoning.
+- `/v1/jobs`: `jobs:create`; `/v1/jobs/{id}`: `jobs:read`.
 
-- `Authorization: Bearer <short-lived JWT>`
-- `Content-Type: application/json` for JSON bodies
-- `X-Request-ID` recommended; UUID v7 preferred
-- `Idempotency-Key` required by future non-idempotent job creation where retry duplication is possible
+## Chat vs evidence reasoning
+`ChatResponse` is intentionally separate from `ReasonResponse`. Chat does not expose `citations` or `evidence_status` and must not imply evidence grounding. `/v1/reason` is the evidence-grounded path and only returns HTTP 200 when sufficient evidence supports completion.
 
-## JWT
-
-Required claims: `iss`, `aud`, `sub`, `exp`, `jti`, `scope`.
-
-Scopes are endpoint permissions, not document permissions. Knowledge endpoints additionally verify tenant/document grants.
-
-## Endpoint baseline
-
-| Method | Path | Scope | Phase 1A status |
-|---|---|---|---|
-| GET | `/health` | public | contract only |
-| GET | `/v1/capabilities` | authenticated | contract only |
-| GET | `/v1/models` | authenticated | contract only |
-| POST | `/v1/search` | `search:read` | contract only |
-| POST | `/v1/knowledge/query` | `knowledge:read` | contract only |
-| POST | `/v1/reason` | `reason:execute` + knowledge/model scopes as needed | contract only |
-| POST | `/v1/chat/completions` | `models:invoke` | contract only |
-| POST | `/v1/jobs` | `jobs:create` | contract only |
-| GET | `/v1/jobs/{id}` | `jobs:read` | contract only |
-
-No Phase 1A endpoint is represented as a deployed production service.
+## Retrieval vs reasoning when evidence is weak
+`/v1/knowledge/query` is a retrieval operation. A successfully executed retrieval may return HTTP 200 with `evidence_status=insufficient` and zero/weak citations. `/v1/reason` is an evidence-grounded decision operation; if evidence is insufficient to answer, it returns HTTP 422 with `INSUFFICIENT_EVIDENCE` and must not fabricate an answer or citation.
 
 ## Citation contract
-
-A citation contains stable source identity and only known locations:
-
-```json
-{
-  "source_id": "book-001",
-  "document_version": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
-  "title": "Authorized test document",
-  "chapter_id": "ch-2",
-  "chapter_title": "Chapter 2",
-  "page_label": "42",
-  "pdf_page_index": 47,
-  "epub_locator": null,
-  "chunk_id": "chunk-example",
-  "source_text": "Actual retrieved authorized text",
-  "score": 0.87
-}
-```
-
-`score` is retrieval relevance, not legal correctness. Unknown location fields are `null`.
-
-## Reasoning response
-
-Logical fields accepted by the main site: `request_id`, `status`, `answer`, `citations`, `evidence_status`, `engine`, `model`, `provider`, `usage`, `error`.
-
-`evidence_status` distinguishes sufficient/insufficient/unverified evidence. An insufficient-evidence response must not invent citations.
+Citation fields include `source_id`, `document_version`, `chapter_id`, `chapter_title`, `page_label`, `pdf_page_index`, `epub_locator`, `chunk_id`, `source_text`, and retrieval `score`. Unknown locations are `null`. `score` is retrieval relevance, not legal correctness.
 
 ## Errors
+Standard envelope: `request_id`, `status=failed`, and `error { code, message, retryable, retry_after_seconds, provider }`.
 
-Standard envelope:
+HTTP mapping:
+- 400 `INVALID_REQUEST`
+- 401 `UNAUTHORIZED`
+- 403 `FORBIDDEN`
+- 404 `KNOWLEDGE_NOT_FOUND` or `JOB_NOT_FOUND`
+- 422 `INSUFFICIENT_EVIDENCE` for evidence-grounded reasoning refusal
+- 429 `PROVIDER_QUOTA_EXCEEDED`
+- 500 `INTERNAL_ERROR`
+- 503 `MODEL_UNAVAILABLE` or `SERVICE_UNAVAILABLE`
+- 504 `TIMEOUT`
 
-```json
-{
-  "request_id": "019...",
-  "status": "failed",
-  "error": {
-    "code": "MODEL_UNAVAILABLE",
-    "message": "No authorized model is currently available",
-    "retryable": true,
-    "retry_after_seconds": 60,
-    "provider": null
-  }
-}
-```
+429 responses expose `Retry-After` when known. Provider raw errors remain in protected logs, not public response bodies.
 
-HTTP mapping baseline:
-
-- `UNAUTHORIZED` -> 401
-- `FORBIDDEN` -> 403
-- `INVALID_REQUEST` -> 400
-- `KNOWLEDGE_NOT_FOUND` -> 404
-- `INSUFFICIENT_EVIDENCE` -> 422 when the requested operation cannot be completed from evidence
-- `PROVIDER_QUOTA_EXCEEDED` -> 429
-- `MODEL_UNAVAILABLE` -> 503
-- `TIMEOUT` -> 504
-- `INTERNAL_ERROR` -> 500
-
-When appropriate, 429/503 responses should include `Retry-After`.
+## Contract test matrix
+| Case | Expected |
+|---|---|
+| no bearer token | 401 UNAUTHORIZED |
+| expired/invalid JWT | 401 UNAUTHORIZED |
+| valid JWT missing endpoint scope | 403 FORBIDDEN |
+| valid scope but missing document grant | 403 FORBIDDEN |
+| knowledge retrieval runs but finds weak/no evidence | 200 + evidence_status=insufficient |
+| evidence-grounded reasoning lacks evidence | 422 INSUFFICIENT_EVIDENCE |
+| unknown knowledge resource | 404 KNOWLEDGE_NOT_FOUND |
+| unknown job | 404 JOB_NOT_FOUND |
+| provider quota exhausted | 429 PROVIDER_QUOTA_EXCEEDED |
+| model unavailable | 503 MODEL_UNAVAILABLE |
+| upstream timeout | 504 TIMEOUT |
+| unexpected server failure | 500 INTERNAL_ERROR |
 
 ## Capability truthfulness
+Capability/model states are `planned`, `unavailable`, `degraded`, or `available`. `available` requires an implemented and verified backing service. Stubs are never reported as available.
 
-`/v1/capabilities` and `/v1/models` may return `planned`, `unavailable`, `degraded`, or `available`. `available` requires an implemented and verified backing capability. Stubs are never `available`.
+## Reproducible validation
+CI validates the contract with Redocly CLI. Equivalent local command:
+
+```bash
+npx --yes @redocly/cli@1.34.5 lint contracts/openapi.yaml
+```
+
+The version is pinned in CI. Phase 1A validation proves contract syntax/quality only; it does not prove a Runtime, Search, RAG, or model provider is operational.
