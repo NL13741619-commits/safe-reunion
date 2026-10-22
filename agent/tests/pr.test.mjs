@@ -1,0 +1,1 @@
+import test from'node:test';import assert from'node:assert/strict';import{PullRequestBuilder}from'../src/pr.mjs';test('PR creation is denied in dry-run',async()=>await assert.rejects(()=>new PullRequestBuilder().create(),/EXECUTION_NOT_APPROVED/));
