@@ -78,8 +78,7 @@ export function modelGate(env = process.env) {
     if (env.AIVAULT_MOCK_CONTRACT !== '1') return { ok: false, code: 'BLOCKED_MOCK_NOT_ENABLED' };
     return { ok: true, provider: 'mock', model: env.AIVAULT_MODEL_NAME, mock: true };
   }
-  if (!env.AIVAULT_MODEL_TOKEN) return { ok: false, code: 'BLOCKED_NO_MODEL' };
-  return { ok: false, code: 'BLOCKED_PROVIDER_NOT_AUTHORIZED' };
+  return { ok: false, code: 'BLOCKED_UNVERIFIED_PROVIDER' };
 }
 
 export function buildModelRequest(task, instruction, env = process.env) {
