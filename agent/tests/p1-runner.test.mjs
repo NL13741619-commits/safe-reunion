@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createTask, transition, claim, recoverExpiredLease, assertLeaseOwner, assertWorkspacePath, modelGate, buildModelRequest } from '../src/p1-runner.mjs';
+import { createTask, transition, claim, recoverExpiredLease, assertLeaseOwner, heartbeat, assertWorkspacePath, modelGate, buildModelRequest } from '../src/p1-runner.mjs';
 
 test('task requires feature branch', () => assert.throws(() => createTask({task_id:'x',base_branch:'main'}), /INVALID_TASK/));
 test('task rejects unsafe task id', () => assert.throws(() => createTask({task_id:'x\nmalicious',base_branch:'feature/x'}), /INVALID_TASK/));
@@ -14,6 +14,8 @@ test('duplicate claim is rejected', () => { const t=createTask({task_id:'x',base
 test('expired lease recovers to queue', () => { const t=createTask({task_id:'x',base_branch:'feature/x'}); claim(t,'w',0,1000); assert.equal(recoverExpiredLease(t,1001),true); assert.equal(t.state,'QUEUED'); });
 test('claim attempts are capped into dead-letter', () => { const t=createTask({task_id:'x',base_branch:'feature/x'}); for(let i=0;i<3;i++){ claim(t,'w',i*2000,1000); recoverExpiredLease(t,i*2000+1001); } assert.throws(()=>claim(t,'w',7000,1000),/MAX_ATTEMPTS_EXCEEDED/); assert.equal(t.state,'DEAD_LETTER'); });
 test('lease owner is enforced', () => { const t=createTask({task_id:'x',base_branch:'feature/x'}); claim(t,'worker-a',0,1000); assert.equal(assertLeaseOwner(t,'worker-a',1),true); assert.throws(()=>assertLeaseOwner(t,'worker-b',1),/LEASE_NOT_OWNED/); });
+test('heartbeat renews owned live lease', () => { const t=createTask({task_id:'x',base_branch:'feature/x'}); claim(t,'worker-a',0,1000); assert.equal(heartbeat(t,'worker-a',500,2000),2500); assert.equal(t.lease.expires_at,2500); });
+test('heartbeat rejects wrong owner', () => { const t=createTask({task_id:'x',base_branch:'feature/x'}); claim(t,'worker-a',0,1000); assert.throws(()=>heartbeat(t,'worker-b',500,2000),/LEASE_NOT_OWNED/); });
 test('expired lease cannot be used', () => { const t=createTask({task_id:'x',base_branch:'feature/x'}); claim(t,'worker-a',0,1000); assert.throws(()=>assertLeaseOwner(t,'worker-a',1000),/LEASE_EXPIRED/); });
 test('invalid lease TTL is rejected', () => { const t=createTask({task_id:'x',base_branch:'feature/x'}); assert.throws(()=>claim(t,'w',0,10),/INVALID_LEASE/); });
 test('workspace accepts source paths', () => assert.equal(assertWorkspacePath('agent/src/x.mjs'),'agent/src/x.mjs'));
