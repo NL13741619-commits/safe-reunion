@@ -1,0 +1,31 @@
+name: OpenAPI Contract
+
+on:
+  pull_request:
+    paths:
+      - 'contracts/openapi.yaml'
+      - 'docs/api-contract.md'
+      - '.github/workflows/openapi-contract.yml'
+  push:
+    branches:
+      - 'feature/aivault-core-phase1'
+    paths:
+      - 'contracts/openapi.yaml'
+      - 'docs/api-contract.md'
+
+permissions:
+  contents: read
+
+jobs:
+  lint-openapi:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Lint OpenAPI 3.1 contract
+        run: npx --yes @redocly/cli@1.34.5 lint contracts/openapi.yaml
