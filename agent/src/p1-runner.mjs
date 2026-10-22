@@ -47,8 +47,9 @@ export function recoverExpiredLease(task, now = Date.now()) {
 
 export function assertWorkspacePath(path) {
   const value = String(path || '').replaceAll('\\','/');
-  if (!value || value.startsWith('/') || value.includes('..') || value.startsWith('.git/') || value.startsWith('.github/workflows/')) throw new Error('PATH_DENIED');
-  if (!value.startsWith('agent/')) throw new Error('PATH_OUTSIDE_WORKSPACE');
+  const segments = value.split('/');
+  if (!value || value.startsWith('/') || value.includes('\0') || value.includes('//') || segments.includes('.') || segments.includes('..') || value.startsWith('.git/') || value.startsWith('.github/workflows/')) throw new Error('PATH_DENIED');
+  if (!value.startsWith('agent/') || value === 'agent/') throw new Error('PATH_OUTSIDE_WORKSPACE');
   return value;
 }
 
