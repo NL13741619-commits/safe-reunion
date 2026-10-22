@@ -5,6 +5,7 @@ import { parseEditPlan, summarizePlan } from '../src/p1-planner.mjs';
 
 const env = { AIVAULT_KILL_SWITCH:'0', AIVAULT_MODEL_PROVIDER:'mock', AIVAULT_MODEL_NAME:'contract-test', AIVAULT_MOCK_CONTRACT:'1' };
 const task = { task_id:'P1-test' };
+const marked = fn => { fn.aivaultMockTransport = true; return fn; };
 
 test('adapter is fail-closed while kill switch is unset', async () => {
   const r = await new ModelAdapter({env:{},transport:mockZeroCostTransport()}).generate({task,instruction:'x'});
@@ -31,10 +32,10 @@ test('mock zero-cost model contract succeeds', async () => {
   assert.equal(r.ok,true); assert.equal(r.cost_usd,0);
 });
 test('nonzero model cost is rejected', async () => {
-  const transport=mockZeroCostTransport('x'); transport.aivaultMockTransport=true; const original=transport; const costly=async req=>({...(await original(req)),cost_usd:0.01}); costly.aivaultMockTransport=true; const r=await new ModelAdapter({env,transport:costly}).generate({task,instruction:'x'}); assert.equal(r.code,'MODEL_NONZERO_COST');
+  const r=await new ModelAdapter({env,transport:marked(async()=>({output:'x',cost_usd:0.01}))}).generate({task,instruction:'x'}); assert.equal(r.code,'MODEL_NONZERO_COST');
 });
 test('bad model response is rejected', async () => {
-  const transport=async()=>({}); transport.aivaultMockTransport=true; const r=await new ModelAdapter({env,transport}).generate({task,instruction:'x'}); assert.equal(r.code,'MODEL_BAD_RESPONSE');
+  const r=await new ModelAdapter({env,transport:marked(async()=>({}))}).generate({task,instruction:'x'}); assert.equal(r.code,'MODEL_BAD_RESPONSE');
 });
 test('planner accepts one agent replace_file edit', () => {
   const p=parseEditPlan(JSON.stringify({edits:[{op:'replace_file',path:'agent/src/example.mjs',content:'export const x=1;'}]})); assert.equal(p.ok,true); assert.equal(summarizePlan(p).status,'READY_FOR_SANDBOX');
