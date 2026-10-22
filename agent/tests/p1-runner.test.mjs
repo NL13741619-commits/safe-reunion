@@ -14,8 +14,9 @@ test('workspace accepts agent paths only', () => assert.equal(assertWorkspacePat
 test('workspace rejects traversal', () => assert.throws(() => assertWorkspacePath('agent/../index.html'), /PATH_DENIED/));
 test('workspace rejects product root', () => assert.throws(() => assertWorkspacePath('index.html'), /PATH_OUTSIDE_WORKSPACE/));
 test('workspace rejects workflow mutation', () => assert.throws(() => assertWorkspacePath('.github/workflows/x.yml'), /PATH_DENIED/));
-test('model gate blocks missing credentials', () => assert.equal(modelGate({}).code,'BLOCKED_NO_MODEL'));
-test('kill switch wins', () => assert.equal(modelGate({AIVAULT_KILL_SWITCH:'1',AIVAULT_MODEL_PROVIDER:'x',AIVAULT_MODEL_NAME:'y',AIVAULT_MODEL_TOKEN:'z'}).code,'BLOCKED_KILL_SWITCH'));
-test('paid model enablement is denied', () => assert.equal(modelGate({AIVAULT_MODEL_PROVIDER:'x',AIVAULT_MODEL_NAME:'y',AIVAULT_MODEL_TOKEN:'z',AIVAULT_ALLOW_PAID:'1'}).code,'BLOCKED_PAID_MODEL'));
-test('configured zero-cost model passes contract gate', () => assert.equal(modelGate({AIVAULT_MODEL_PROVIDER:'x',AIVAULT_MODEL_NAME:'y',AIVAULT_MODEL_TOKEN:'z'}).ok,true));
-test('model request stays bounded to agent and draft-only policy', () => { const env={AIVAULT_MODEL_PROVIDER:'mock',AIVAULT_MODEL_NAME:'m',AIVAULT_MODEL_TOKEN:'t'}; const r=buildModelRequest({task_id:'x'},'a'.repeat(5000),env); assert.equal(r.ok,true); assert.equal(r.instruction.length,4000); assert.equal(r.mutation_scope,'agent/'); assert.equal(r.direct_main_push,false); assert.equal(r.auto_merge,false); });
+test('model gate blocks missing configuration', () => assert.equal(modelGate({}).code,'BLOCKED_NO_MODEL'));
+test('kill switch wins', () => assert.equal(modelGate({AIVAULT_KILL_SWITCH:'1',AIVAULT_MODEL_PROVIDER:'mock',AIVAULT_MODEL_NAME:'y',AIVAULT_MOCK_CONTRACT:'1'}).code,'BLOCKED_KILL_SWITCH'));
+test('paid model enablement is denied', () => assert.equal(modelGate({AIVAULT_MODEL_PROVIDER:'mock',AIVAULT_MODEL_NAME:'y',AIVAULT_MOCK_CONTRACT:'1',AIVAULT_ALLOW_PAID:'1'}).code,'BLOCKED_PAID_MODEL'));
+test('explicit mock contract passes test gate', () => assert.equal(modelGate({AIVAULT_MODEL_PROVIDER:'mock',AIVAULT_MODEL_NAME:'y',AIVAULT_MOCK_CONTRACT:'1'}).ok,true));
+test('unknown provider is never implicitly authorized', () => assert.equal(modelGate({AIVAULT_MODEL_PROVIDER:'x',AIVAULT_MODEL_NAME:'y',AIVAULT_MODEL_TOKEN:'z'}).code,'BLOCKED_PROVIDER_NOT_AUTHORIZED'));
+test('model request stays bounded to agent and draft-only policy', () => { const env={AIVAULT_MODEL_PROVIDER:'mock',AIVAULT_MODEL_NAME:'m',AIVAULT_MOCK_CONTRACT:'1'}; const r=buildModelRequest({task_id:'x'},'a'.repeat(5000),env); assert.equal(r.ok,true); assert.equal(r.instruction.length,4000); assert.equal(r.mutation_scope,'agent/'); assert.equal(r.direct_main_push,false); assert.equal(r.auto_merge,false); assert.equal(r.mock,true); });
