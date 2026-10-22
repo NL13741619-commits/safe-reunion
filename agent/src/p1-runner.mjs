@@ -1,4 +1,4 @@
-const STATES = new Set(['QUEUED','CLAIMED','RUNNING','TESTING','PR_OPEN','BLOCKED','FAILED','DONE']);
+const STATES = new Set(['QUEUED','CLAIMED','RUNNING','TESTING','PR_OPEN','BLOCKED','FAILED','DEAD_LETTER','DONE']);
 const MAX_ATTEMPTS = 3;
 
 function validFeatureBranch(branch) {
@@ -14,8 +14,8 @@ export function createTask(input) {
 export function transition(task, next, detail = '') {
   if (!STATES.has(next)) throw new Error('INVALID_STATE');
   const allowed = {
-    QUEUED: ['CLAIMED','BLOCKED'], CLAIMED: ['RUNNING','QUEUED','BLOCKED'], RUNNING: ['TESTING','BLOCKED','FAILED'],
-    TESTING: ['PR_OPEN','FAILED','BLOCKED'], PR_OPEN: ['DONE','FAILED'], BLOCKED: [], FAILED: ['QUEUED','BLOCKED'], DONE: []
+    QUEUED: ['CLAIMED','BLOCKED','DEAD_LETTER'], CLAIMED: ['RUNNING','QUEUED','BLOCKED'], RUNNING: ['TESTING','BLOCKED','FAILED'],
+    TESTING: ['PR_OPEN','FAILED','BLOCKED'], PR_OPEN: ['DONE','FAILED'], BLOCKED: [], FAILED: ['QUEUED','BLOCKED','DEAD_LETTER'], DEAD_LETTER: [], DONE: []
   };
   if (!allowed[task.state]?.includes(next)) throw new Error('INVALID_TRANSITION');
   task.audit.push({ from: task.state, to: next, detail: String(detail).slice(0,200) });
@@ -25,7 +25,7 @@ export function transition(task, next, detail = '') {
 
 export function claim(task, workerId, now = Date.now(), ttlMs = 60_000) {
   if (task.state !== 'QUEUED') throw new Error('NOT_QUEUED');
-  if (task.attempts >= MAX_ATTEMPTS) throw new Error('MAX_ATTEMPTS_EXCEEDED');
+  if (task.attempts >= MAX_ATTEMPTS) { transition(task, 'DEAD_LETTER', 'retry limit reached'); throw new Error('MAX_ATTEMPTS_EXCEEDED'); }
   if (!workerId || !Number.isFinite(ttlMs) || ttlMs < 1000 || ttlMs > 300000) throw new Error('INVALID_LEASE');
   transition(task, 'CLAIMED', 'lease acquired');
   task.lease = { worker_id: String(workerId).slice(0,100), expires_at: now + ttlMs };
