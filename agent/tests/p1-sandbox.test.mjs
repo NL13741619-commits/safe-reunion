@@ -44,3 +44,25 @@ test('sandbox rejects symlink target', async t => {
   await assert.rejects(()=>applyCreateOnlyPlan({workspaceRoot:root,plan:plan('agent/src/link.mjs')}),/SANDBOX_SYMLINK_DENIED/);
   assert.equal(await fs.readFile(out,'utf8'),'outside');
 });
+
+test('sandbox preflight rejects duplicate targets before writing', async t => {
+  const root=await temp(); t.after(()=>fs.rm(root,{recursive:true,force:true}));
+  const p={ok:true,edits:[{op:'replace_file',path:'agent/src/a.mjs',content:'a'},{op:'replace_file',path:'agent/src/a.mjs',content:'b'}]};
+  await assert.rejects(()=>applyCreateOnlyPlan({workspaceRoot:root,plan:p}),/SANDBOX_DUPLICATE_TARGET/);
+  await assert.rejects(()=>fs.access(path.join(root,'agent/src/a.mjs')));
+});
+
+test('sandbox enforces UTF-8 byte limit before writing', async t => {
+  const root=await temp(); t.after(()=>fs.rm(root,{recursive:true,force:true}));
+  await assert.rejects(()=>applyCreateOnlyPlan({workspaceRoot:root,plan:plan('agent/src/large.mjs','界'.repeat(20000))}),/SANDBOX_CONTENT_TOO_LARGE/);
+  await assert.rejects(()=>fs.access(path.join(root,'agent/src/large.mjs')));
+});
+
+test('multi-file preflight failure leaves no partial file', async t => {
+  const root=await temp(); t.after(()=>fs.rm(root,{recursive:true,force:true}));
+  await fs.mkdir(path.join(root,'agent/src'),{recursive:true}); await fs.writeFile(path.join(root,'agent/src/existing.mjs'),'old');
+  const p={ok:true,edits:[{op:'replace_file',path:'agent/src/new.mjs',content:'new'},{op:'replace_file',path:'agent/src/existing.mjs',content:'bad'}]};
+  await assert.rejects(()=>applyCreateOnlyPlan({workspaceRoot:root,plan:p}),/SANDBOX_TARGET_EXISTS/);
+  await assert.rejects(()=>fs.access(path.join(root,'agent/src/new.mjs')));
+  assert.equal(await fs.readFile(path.join(root,'agent/src/existing.mjs'),'utf8'),'old');
+});
