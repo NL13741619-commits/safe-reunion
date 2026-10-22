@@ -11,14 +11,14 @@ export async function runP1MockE2E({ input, instruction, env = {}, transport, wo
   const model = await new ModelAdapter({ env, transport }).generate({ task, instruction });
   if (!model.ok) {
     transition(task, 'BLOCKED', model.code);
-    return { ok: false, code: model.code, task, model_called: model.called === true, mutation_performed: false, draft_pr_created: false };
+    return { ok: false, code: model.code, task, model_called: model.called === true, mutation_performed: false, tests_executed: false, draft_pr_created: false };
   }
 
   const plan = parseEditPlan(model.output);
   if (!plan.ok) {
     transition(task, 'FAILED', plan.code);
     transition(task, 'BLOCKED', plan.code);
-    return { ok: false, code: plan.code, task, model_called: true, mutation_performed: false, draft_pr_created: false };
+    return { ok: false, code: plan.code, task, model_called: true, mutation_performed: false, tests_executed: false, draft_pr_created: false };
   }
 
   transition(task, 'TESTING', 'mock plan validated; no filesystem mutation');
@@ -29,6 +29,7 @@ export async function runP1MockE2E({ input, instruction, env = {}, transport, wo
     model_called: true,
     model_cost_usd: model.cost_usd,
     mutation_performed: false,
+    tests_executed: false,
     draft_pr_created: false,
     plan: summarizePlan(plan)
   };
