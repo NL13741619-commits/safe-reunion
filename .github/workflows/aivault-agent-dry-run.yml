@@ -41,7 +41,7 @@ jobs:
 
       - name: Run agent unit tests
         working-directory: agent
-        run: node --test tests
+        run: node --test tests/*.test.mjs
 
       - name: Process trusted GitHub event in dry-run mode
         if: github.event_name == 'issues' || github.event_name == 'issue_comment'
