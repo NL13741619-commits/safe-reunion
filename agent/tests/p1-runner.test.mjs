@@ -14,10 +14,12 @@ test('expired lease recovers to queue', () => { const t=createTask({task_id:'x',
 test('lease owner is enforced', () => { const t=createTask({task_id:'x',base_branch:'feature/x'}); claim(t,'worker-a',0,1000); assert.equal(assertLeaseOwner(t,'worker-a',1),true); assert.throws(()=>assertLeaseOwner(t,'worker-b',1),/LEASE_NOT_OWNED/); });
 test('expired lease cannot be used', () => { const t=createTask({task_id:'x',base_branch:'feature/x'}); claim(t,'worker-a',0,1000); assert.throws(()=>assertLeaseOwner(t,'worker-a',1000),/LEASE_EXPIRED/); });
 test('invalid lease TTL is rejected', () => { const t=createTask({task_id:'x',base_branch:'feature/x'}); assert.throws(()=>claim(t,'w',0,10),/INVALID_LEASE/); });
-test('workspace accepts agent paths only', () => assert.equal(assertWorkspacePath('agent/src/x.mjs'),'agent/src/x.mjs'));
-test('workspace rejects traversal', () => assert.throws(() => assertWorkspacePath('agent/../index.html'), /PATH_DENIED/));
-test('workspace rejects dot segment', () => assert.throws(() => assertWorkspacePath('agent/./src/x.mjs'), /PATH_DENIED/));
-test('workspace rejects repeated separator', () => assert.throws(() => assertWorkspacePath('agent//src/x.mjs'), /PATH_DENIED/));
+test('workspace accepts source paths', () => assert.equal(assertWorkspacePath('agent/src/x.mjs'),'agent/src/x.mjs'));
+test('workspace accepts test paths', () => assert.equal(assertWorkspacePath('agent/tests/x.test.mjs'),'agent/tests/x.test.mjs'));
+test('workspace rejects other agent paths', () => assert.throws(() => assertWorkspacePath('agent/package.json'), /PATH_OUTSIDE_WORKSPACE/));
+test('workspace rejects traversal', () => assert.throws(() => assertWorkspacePath('agent/src/../../index.html'), /PATH_DENIED/));
+test('workspace rejects dot segment', () => assert.throws(() => assertWorkspacePath('agent/src/./x.mjs'), /PATH_DENIED/));
+test('workspace rejects repeated separator', () => assert.throws(() => assertWorkspacePath('agent/src//x.mjs'), /PATH_DENIED/));
 test('workspace rejects product root', () => assert.throws(() => assertWorkspacePath('index.html'), /PATH_OUTSIDE_WORKSPACE/));
 test('workspace rejects workflow mutation', () => assert.throws(() => assertWorkspacePath('.github/workflows/x.yml'), /PATH_DENIED/));
 test('kill switch is fail-closed when unset', () => assert.equal(modelGate({}).code,'BLOCKED_KILL_SWITCH'));
@@ -26,4 +28,4 @@ test('model gate blocks missing configuration after explicit safety enables', ()
 test('paid model enablement is denied', () => assert.equal(modelGate({AIVAULT_KILL_SWITCH:'0',AIVAULT_ALLOW_PAID:'1',AIVAULT_MODEL_PROVIDER:'mock',AIVAULT_MODEL_NAME:'y',AIVAULT_MOCK_CONTRACT:'1'}).code,'BLOCKED_PAID_MODEL'));
 test('explicit mock contract passes test gate', () => assert.equal(modelGate({AIVAULT_KILL_SWITCH:'0',AIVAULT_ALLOW_PAID:'0',AIVAULT_MODEL_PROVIDER:'mock',AIVAULT_MODEL_NAME:'y',AIVAULT_MOCK_CONTRACT:'1'}).ok,true));
 test('unknown provider is never implicitly authorized', () => assert.equal(modelGate({AIVAULT_KILL_SWITCH:'0',AIVAULT_ALLOW_PAID:'0',AIVAULT_MODEL_PROVIDER:'x',AIVAULT_MODEL_NAME:'y',AIVAULT_MODEL_TOKEN:'z'}).code,'BLOCKED_PROVIDER_NOT_AUTHORIZED'));
-test('model request stays bounded to agent and draft-only policy', () => { const env={AIVAULT_KILL_SWITCH:'0',AIVAULT_ALLOW_PAID:'0',AIVAULT_MODEL_PROVIDER:'mock',AIVAULT_MODEL_NAME:'m',AIVAULT_MOCK_CONTRACT:'1'}; const r=buildModelRequest({task_id:'x'},'a'.repeat(5000),env); assert.equal(r.ok,true); assert.equal(r.instruction.length,4000); assert.equal(r.mutation_scope,'agent/'); assert.equal(r.direct_main_push,false); assert.equal(r.auto_merge,false); assert.equal(r.mock,true); });
+test('model request stays bounded to source and tests with draft-only policy', () => { const env={AIVAULT_KILL_SWITCH:'0',AIVAULT_ALLOW_PAID:'0',AIVAULT_MODEL_PROVIDER:'mock',AIVAULT_MODEL_NAME:'m',AIVAULT_MOCK_CONTRACT:'1'}; const r=buildModelRequest({task_id:'x'},'a'.repeat(5000),env); assert.equal(r.ok,true); assert.equal(r.instruction.length,4000); assert.equal(r.mutation_scope,'agent/src + agent/tests'); assert.equal(r.direct_main_push,false); assert.equal(r.auto_merge,false); assert.equal(r.mock,true); });
