@@ -15,7 +15,7 @@ export class ModelAdapter {
     const request = {
       provider: gate.provider,
       model: gate.model,
-      task_id: task.task_id,
+      task_id: String(task?.task_id || '').slice(0, 120),
       instruction: String(instruction || '').slice(0, 4000),
       constraints: { workspace: 'agent/', paid_api: false, direct_main_push: false, auto_merge: false }
     };
