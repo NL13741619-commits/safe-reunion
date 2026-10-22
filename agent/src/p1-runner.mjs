@@ -54,13 +54,18 @@ export function assertWorkspacePath(path) {
 
 export function modelGate(env = process.env) {
   if (env.AIVAULT_KILL_SWITCH === '1') return { ok: false, code: 'BLOCKED_KILL_SWITCH' };
-  if (!env.AIVAULT_MODEL_PROVIDER || !env.AIVAULT_MODEL_NAME || !env.AIVAULT_MODEL_TOKEN) return { ok: false, code: 'BLOCKED_NO_MODEL' };
+  if (!env.AIVAULT_MODEL_PROVIDER || !env.AIVAULT_MODEL_NAME) return { ok: false, code: 'BLOCKED_NO_MODEL' };
   if (env.AIVAULT_ALLOW_PAID === '1') return { ok: false, code: 'BLOCKED_PAID_MODEL' };
-  return { ok: true, provider: env.AIVAULT_MODEL_PROVIDER, model: env.AIVAULT_MODEL_NAME };
+  if (env.AIVAULT_MODEL_PROVIDER === 'mock') {
+    if (env.AIVAULT_MOCK_CONTRACT !== '1') return { ok: false, code: 'BLOCKED_MOCK_NOT_ENABLED' };
+    return { ok: true, provider: 'mock', model: env.AIVAULT_MODEL_NAME, mock: true };
+  }
+  if (!env.AIVAULT_MODEL_TOKEN) return { ok: false, code: 'BLOCKED_NO_MODEL' };
+  return { ok: false, code: 'BLOCKED_PROVIDER_NOT_AUTHORIZED' };
 }
 
 export function buildModelRequest(task, instruction, env = process.env) {
   const gate = modelGate(env);
   if (!gate.ok) return gate;
-  return { ok: true, provider: gate.provider, model: gate.model, task_id: task.task_id, instruction: String(instruction).slice(0,4000), mutation_scope: 'agent/', direct_main_push: false, auto_merge: false };
+  return { ok: true, provider: gate.provider, model: gate.model, task_id: task.task_id, instruction: String(instruction).slice(0,4000), mutation_scope: 'agent/', direct_main_push: false, auto_merge: false, mock: gate.mock === true };
 }
