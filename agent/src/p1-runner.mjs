@@ -14,8 +14,8 @@ export function createTask(input) {
 export function transition(task, next, detail = '') {
   if (!STATES.has(next)) throw new Error('INVALID_STATE');
   const allowed = {
-    QUEUED: ['CLAIMED','BLOCKED','DEAD_LETTER'], CLAIMED: ['RUNNING','QUEUED','BLOCKED'], RUNNING: ['TESTING','BLOCKED','FAILED'],
-    TESTING: ['PR_OPEN','FAILED','BLOCKED'], PR_OPEN: ['DONE','FAILED'], BLOCKED: [], FAILED: ['QUEUED','BLOCKED','DEAD_LETTER'], DEAD_LETTER: [], DONE: []
+    QUEUED: ['CLAIMED','BLOCKED','DEAD_LETTER'], CLAIMED: ['RUNNING','QUEUED','BLOCKED'], RUNNING: ['TESTING','QUEUED','BLOCKED','FAILED'],
+    TESTING: ['PR_OPEN','QUEUED','FAILED','BLOCKED'], PR_OPEN: ['DONE','FAILED'], BLOCKED: [], FAILED: ['QUEUED','BLOCKED','DEAD_LETTER'], DEAD_LETTER: [], DONE: []
   };
   if (!allowed[task.state]?.includes(next)) throw new Error('INVALID_TRANSITION');
   task.audit.push({ from: task.state, to: next, detail: String(detail).slice(0,200) });
@@ -48,7 +48,7 @@ export function heartbeat(task, workerId, now = Date.now(), ttlMs = 60_000) {
 }
 
 export function recoverExpiredLease(task, now = Date.now()) {
-  if (task.state === 'CLAIMED' && task.lease && task.lease.expires_at <= now) {
+  if (['CLAIMED','RUNNING','TESTING'].includes(task.state) && task.lease && task.lease.expires_at <= now) {
     task.lease = null;
     transition(task, 'QUEUED', 'expired lease recovered');
     return true;
