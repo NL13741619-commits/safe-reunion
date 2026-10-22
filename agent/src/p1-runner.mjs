@@ -39,6 +39,14 @@ export function assertLeaseOwner(task, workerId, now = Date.now()) {
   return true;
 }
 
+export function heartbeat(task, workerId, now = Date.now(), ttlMs = 60_000) {
+  assertLeaseOwner(task, workerId, now);
+  if (!Number.isFinite(ttlMs) || ttlMs < 1000 || ttlMs > 300000) throw new Error('INVALID_LEASE');
+  task.lease.expires_at = now + ttlMs;
+  task.audit.push({ from: task.state, to: task.state, detail: 'heartbeat' });
+  return task.lease.expires_at;
+}
+
 export function recoverExpiredLease(task, now = Date.now()) {
   if (task.state === 'CLAIMED' && task.lease && task.lease.expires_at <= now) {
     task.lease = null;
