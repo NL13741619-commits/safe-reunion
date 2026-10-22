@@ -39,6 +39,11 @@ export function assertLeaseOwner(task, workerId, now = Date.now()) {
   return true;
 }
 
+export function transitionOwned(task, next, workerId, now = Date.now(), detail = '') {
+  assertLeaseOwner(task, workerId, now);
+  return transition(task, next, detail);
+}
+
 export function heartbeat(task, workerId, now = Date.now(), ttlMs = 60_000) {
   assertLeaseOwner(task, workerId, now);
   if (!Number.isFinite(ttlMs) || ttlMs < 1000 || ttlMs > 300000) throw new Error('INVALID_LEASE');
