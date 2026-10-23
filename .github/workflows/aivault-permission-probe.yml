@@ -1,0 +1,74 @@
+name: AIVAULT Dawn Permission Probe
+
+on:
+  push:
+    branches: [feature/aivault-permission-check-20261023]
+    paths: [.github/workflows/aivault-permission-probe.yml]
+
+permissions: {}
+
+concurrency:
+  group: aivault-permission-probe
+  cancel-in-progress: false
+
+jobs:
+  verify-branch-and-draft-pr:
+    if: >-
+      github.repository == 'NL13741619-commits/safe-reunion' &&
+      (github.actor_id == '305579832' || github.actor_id == '306819786')
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      HEAD_SHA: ${{ github.sha }}
+      RUN_ID: ${{ github.run_id }}
+      RUN_ATTEMPT: ${{ github.run_attempt }}
+      ACTOR_ID: ${{ github.actor_id }}
+    steps:
+      - name: Verify actual runtime branch, contents and draft PR permissions
+        shell: python
+        run: |
+          import os, json, base64, urllib.request, urllib.error
+          repo = os.environ["REPO"]
+          assert repo == "NL13741619-commits/safe-reunion"
+          assert os.environ["ACTOR_ID"] in {"305579832", "306819786"}
+          target = "feature/aivault-permission-check-20261023"
+          branch = "feature/aivault-permission-probe-" + os.environ["RUN_ID"] + "-" + os.environ["RUN_ATTEMPT"]
+          run_url = "https://github.com/" + repo + "/actions/runs/" + os.environ["RUN_ID"]
+          def api(method, endpoint, payload=None):
+              data = None if payload is None else json.dumps(payload).encode()
+              request = urllib.request.Request(
+                  "https://api.github.com/repos/" + repo + endpoint, data=data, method=method,
+                  headers={"Authorization": "Bearer " + os.environ["GH_TOKEN"],
+                           "Accept": "application/vnd.github+json",
+                           "X-GitHub-Api-Version": "2022-11-28",
+                           "Content-Type": "application/json"})
+              try:
+                  with urllib.request.urlopen(request, timeout=20) as response:
+                      return json.load(response)
+              except urllib.error.HTTPError as error:
+                  # Error bodies may contain internal details; report only stage and HTTP code.
+                  raise RuntimeError(method + " " + endpoint.split("?")[0] + " HTTP " + str(error.code)) from None
+          api("POST", "/git/refs", {"ref": "refs/heads/" + branch, "sha": os.environ["HEAD_SHA"]})
+          receipt = {"runtime": "github-actions", "run_url": run_url, "actor_id": os.environ["ACTOR_ID"],
+                     "source_sha": os.environ["HEAD_SHA"], "branch": branch,
+                     "scope": "isolated permission verification", "paid_api_called": False}
+          contents = base64.b64encode((json.dumps(receipt, indent=2) + "\n").encode()).decode()
+          commit = api("PUT", "/contents/agent/permission-probes/" + os.environ["RUN_ID"] + "-" + os.environ["RUN_ATTEMPT"] + ".json",
+                       {"message": "test(agent): record Dawn runtime write permission", "branch": branch, "content": contents})
+          pr = api("POST", "/pulls",
+                   {"title": "Permission proof: Dawn runtime branch + contents + draft PR",
+                    "head": branch, "base": target, "draft": True,
+                    "body": "Created by the actual Actions GITHUB_TOKEN. Permission verification only.\n\nRun: " + run_url +
+                            "\nCommit: " + commit["commit"]["sha"] +
+                            "\nNo model calls or product changes. Do not merge this probe."})
+          result = {"branch_created": True, "contents_written": True, "draft_pr_created": True,
+                    "pr_url": pr["html_url"], "created_by": pr["user"]["login"],
+                    "commit_sha": commit["commit"]["sha"], "run_url": run_url}
+          print(json.dumps(result))
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as summary:
+              summary.write("### Dawn runtime permission verification\n\n" + json.dumps(result, indent=2) + "\n")
