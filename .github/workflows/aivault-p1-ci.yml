@@ -1,0 +1,32 @@
+name: AIVAULT P1 CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'agent/**'
+      - '.github/workflows/aivault-p1-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Run P1 tests
+        run: >-
+          node --test
+          agent/tests/action.test.mjs
+          agent/tests/p1-model-planner.test.mjs
+          agent/tests/p1-orchestrator.test.mjs
+          agent/tests/p1-runner.test.mjs
+          agent/tests/p1-sandbox.test.mjs
+          agent/tests/p1-task-store.test.mjs
