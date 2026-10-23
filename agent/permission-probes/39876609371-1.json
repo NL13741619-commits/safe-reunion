@@ -1,0 +1,9 @@
+{
+  "runtime": "github-actions",
+  "run_url": "https://github.com/NL13741619-commits/safe-reunion/actions/runs/39876609371",
+  "actor_id": "305579832",
+  "source_sha": "489e2eae9e09f93c51b93cc853ad8879b905d6ac",
+  "branch": "feature/aivault-permission-probe-39876609371-1",
+  "scope": "isolated permission verification",
+  "paid_api_called": false
+}
