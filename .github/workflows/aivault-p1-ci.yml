@@ -29,3 +29,4 @@ jobs:
           agent/tests/p1-orchestrator.test.mjs
           agent/tests/p1-runner.test.mjs
           agent/tests/p1-sandbox.test.mjs
+          agent/tests/p1-task-store.test.mjs
