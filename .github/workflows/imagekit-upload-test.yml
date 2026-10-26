@@ -19,9 +19,15 @@ jobs:
             exit 1
           fi
 
-      - name: Create tiny MP4
+      - name: Create tiny MP4 without ffmpeg
         run: |
-          ffmpeg -f lavfi -i color=c=black:s=160x120:d=1 -c:v libx264 -pix_fmt yuv420p /tmp/aivault-imagekit-test.mp4 -y
+          python3 - <<'PY'
+          import base64
+          # Minimal ISO-BMFF/MP4 test payload. Enough for upload/auth verification.
+          data = base64.b64decode('AAAAHGZ0eXBpc29tAAACAGlzb21pc28ybXA0MQAAAARtZGF0')
+          open('/tmp/aivault-imagekit-test.mp4','wb').write(data)
+          print('created bytes:', len(data))
+          PY
 
       - name: Upload test video to ImageKit
         env:
@@ -30,7 +36,7 @@ jobs:
           HTTP=$(curl -sS -o /tmp/imagekit-response.json -w '%{http_code}' \
             -X POST 'https://upload.imagekit.io/api/v1/files/upload' \
             -u "$IMAGEKIT_KEY:" \
-            -F 'file=@/tmp/aivault-imagekit-test.mp4' \
+            -F 'file=@/tmp/aivault-imagekit-test.mp4;type=video/mp4' \
             -F 'fileName=aivault-imagekit-test.mp4' \
             -F 'folder=/dawn-second-base/tests')
           echo "ImageKit HTTP status: $HTTP"
@@ -43,6 +49,6 @@ jobs:
               if 'message' in d: safe['message']=d['message']
               print(json.dumps(safe, ensure_ascii=False))
           except Exception:
-              print('Unable to parse ImageKit response')
+              print(open(p, errors='replace').read()[:1000])
           PY
           test "$HTTP" -ge 200 -a "$HTTP" -lt 300
