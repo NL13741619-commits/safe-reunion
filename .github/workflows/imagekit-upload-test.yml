@@ -1,0 +1,48 @@
+name: ImageKit Upload Test
+
+on:
+  push:
+    paths:
+      - '.github/workflows/imagekit-upload-test.yml'
+  workflow_dispatch:
+
+jobs:
+  upload-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify secret exists
+        env:
+          IMAGEKIT_KEY: ${{ secrets.AIVAULT_Backend }}
+        run: |
+          if [ -z "$IMAGEKIT_KEY" ]; then
+            echo "AIVAULT_Backend secret is missing"
+            exit 1
+          fi
+
+      - name: Create tiny MP4
+        run: |
+          ffmpeg -f lavfi -i color=c=black:s=160x120:d=1 -c:v libx264 -pix_fmt yuv420p /tmp/aivault-imagekit-test.mp4 -y
+
+      - name: Upload test video to ImageKit
+        env:
+          IMAGEKIT_KEY: ${{ secrets.AIVAULT_Backend }}
+        run: |
+          HTTP=$(curl -sS -o /tmp/imagekit-response.json -w '%{http_code}' \
+            -X POST 'https://upload.imagekit.io/api/v1/files/upload' \
+            -u "$IMAGEKIT_KEY:" \
+            -F 'file=@/tmp/aivault-imagekit-test.mp4' \
+            -F 'fileName=aivault-imagekit-test.mp4' \
+            -F 'folder=/dawn-second-base/tests')
+          echo "ImageKit HTTP status: $HTTP"
+          python3 - <<'PY'
+          import json
+          p='/tmp/imagekit-response.json'
+          try:
+              d=json.load(open(p))
+              safe={k:d.get(k) for k in ('fileId','name','url','filePath','size') if k in d}
+              if 'message' in d: safe['message']=d['message']
+              print(json.dumps(safe, ensure_ascii=False))
+          except Exception:
+              print('Unable to parse ImageKit response')
+          PY
+          test "$HTTP" -ge 200 -a "$HTTP" -lt 300
